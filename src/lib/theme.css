@@ -1,0 +1,66 @@
+:root {
+  --orange: #fa9549;
+  --orange-dim: #b8662c;
+  --bg: #1d1f22;
+  --panel: #2a2d31;
+  --panel-2: #33373c;
+  --line: #45494f;
+  --text: #e8e6e3;
+  --muted: #9a9ea4;
+  --ok: #7fc36b;
+  --bad: #e5604d;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 4px 8px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--orange);
+}
+
+button.primary {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: #1d1f22;
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--bad);
+}
+
+h2,
+h3 {
+  margin: 0 0 8px;
+  color: var(--orange);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 13px;
+}
