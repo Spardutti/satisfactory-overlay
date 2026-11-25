@@ -1,5 +1,6 @@
 use super::model::ChecklistStep;
 use super::*;
+use crate::planner::NodeCounts;
 use std::collections::HashMap;
 
 fn step(label: &str, total: u32, built: u32) -> ChecklistStep {
@@ -11,10 +12,10 @@ fn plan(id: &str, steps: Vec<ChecklistStep>) -> Plan {
         target: "Desc_IronScrew_C".into(),
         mode: Mode::Rate { rate: 120.0 },
         miner_tier: "Mk1".into(),
-        purity: "normal".into(),
         belt_tier: "Mk1".into(),
         pipe_tier: "Mk1".into(),
         choices: HashMap::new(),
+        nodes: Default::default(),
     };
     Plan { id: id.into(), name: id.into(), request, steps, positions: Default::default() }
 }
@@ -97,4 +98,19 @@ fn plan_store_round_trips_through_json() {
     store.upsert(plan("a", vec![step("Rod", 2, 1)]));
     let back: PlanStore = serde_json::from_str(&serde_json::to_string(&store).unwrap()).unwrap();
     assert_eq!((back.active, back.plans[0].steps.clone()), (Some("a".into()), vec![step("Rod", 2, 1)]));
+}
+
+#[test]
+fn set_nodes_1_pure_on_iron_ore_stores_it() {
+    let mut request = plan("p", vec![]).request;
+    request.set_nodes("Desc_OreIron_C".into(), NodeCounts { pure: 1, normal: 0, impure: 0 });
+    assert_eq!(request.nodes.get("Desc_OreIron_C"), Some(&NodeCounts { pure: 1, normal: 0, impure: 0 }));
+}
+
+#[test]
+fn set_nodes_all_zero_removes_the_ore() {
+    let mut request = plan("p", vec![]).request;
+    request.set_nodes("Desc_OreIron_C".into(), NodeCounts { pure: 1, normal: 0, impure: 0 });
+    request.set_nodes("Desc_OreIron_C".into(), NodeCounts::default());
+    assert!(request.nodes.is_empty());
 }

@@ -47,6 +47,14 @@ pub fn round(value: f64) -> String {
     text.trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
+/// "1 pure + 2 impure nodes", best purity first.
+pub fn nodes_text(purities: &[&str]) -> String {
+    let count = |p: &str| purities.iter().filter(|x| **x == p).count();
+    let parts: Vec<String> = ["pure", "normal", "impure"].iter().filter(|p| count(p) > 0).map(|p| format!("{} {p}", count(p))).collect();
+    let noun = if purities.len() == 1 { "node" } else { "nodes" };
+    format!("{} {noun}", parts.join(" + "))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

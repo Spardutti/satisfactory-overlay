@@ -63,6 +63,7 @@ pub fn run() {
             layout_cmds::plan_layout,
             layout_cmds::move_block,
             layout_cmds::reset_layout,
+            plan_cmds::set_nodes,
             plan_cmds::list_plans,
             plan_cmds::save_plan,
             plan_cmds::delete_plan,

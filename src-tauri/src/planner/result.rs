@@ -1,3 +1,4 @@
+use super::nodes::NodeSupply;
 use super::transport::BeltGroup;
 use serde::Serialize;
 
@@ -36,6 +37,7 @@ pub struct RawNeed {
     /// miners per output belt; for fluids and gathered items, one group per line
     pub belts: Vec<BeltGroup>,
     pub goes_to: Vec<Usage>,
+    pub nodes: Option<NodeSupply>,
 }
 
 /// Where an item goes next: which product's machines take how much.

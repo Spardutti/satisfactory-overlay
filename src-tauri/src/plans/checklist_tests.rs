@@ -20,7 +20,7 @@ fn plan(data: &GameData, raw: &[&str], target: &str, rate: f64) -> PlanResult {
 }
 
 fn screw_cards(rate: f64) -> Vec<ChecklistStep> {
-    checklist(&plan(&fixture(), &["Desc_OreIron_C"], "Desc_IronScrew_C", rate), "Mk1", "normal")
+    checklist(&plan(&fixture(), &["Desc_OreIron_C"], "Desc_IronScrew_C", rate), "Mk1")
 }
 
 fn card<'a>(cards: &'a [ChecklistStep], label: &str) -> &'a ChecklistStep {
@@ -97,7 +97,7 @@ fn checklist_two_items_from_one_recipe_get_distinct_labels() {
     let mut data = GameData::default();
     data.recipes.push(recipe("Plastic", &[("Oil", 1.0)], &[("Plastic", 1.0), ("Residue", 1.0)]));
     data.recipes.push(recipe("Top", &[("Plastic", 1.0), ("Residue", 1.0)], &[("Top", 1.0)]));
-    let cards = checklist(&plan(&data, &["Oil"], "Top", 1.0), "Mk1", "normal");
+    let cards = checklist(&plan(&data, &["Oil"], "Top", 1.0), "Mk1");
     let labels: HashSet<&str> = cards.iter().map(|s| s.label.as_str()).collect();
     assert_eq!(labels.len(), cards.len(), "{labels:?}");
 }
@@ -107,4 +107,23 @@ fn plan_saved_before_belts_loads_with_mk1_tiers() {
     let old = r#"{"target":"Desc_IronScrew_C","mode":{"kind":"rate","rate":60},"minerTier":"Mk2","purity":"pure"}"#;
     let request: crate::plans::PlanRequest = serde_json::from_str(old).unwrap();
     assert_eq!((request.belt_tier.as_str(), request.pipe_tier.as_str()), ("Mk1", "Mk1"));
+}
+
+#[test]
+fn checklist_miner_card_names_the_listed_nodes_and_the_shortfall() {
+    let mut result = plan(&fixture(), &["Desc_OreIron_C"], "Desc_IronScrew_C", 480.0);
+    let rates = crate::planner::NodeRates { pure: 120.0, normal: 60.0, impure: 30.0, belt: 60.0 };
+    let listed = [("Desc_OreIron_C".to_string(), crate::planner::NodeCounts { pure: 1, normal: 0, impure: 1 })];
+    crate::planner::apply_nodes(&mut result, &listed.into(), rates);
+    let cards = checklist(&result, "Mk1");
+    assert_eq!(
+        card(&cards, "Miner Mk1 — Iron Ore").detail,
+        "2 × Miner Mk1 on 1 pure + 1 impure nodes · 90 /min · 30 short · the belt holds each miner back, a faster belt needs fewer nodes"
+    );
+}
+
+#[test]
+fn checklist_miner_card_without_nodes_assumes_normal_nodes() {
+    let cards = screw_cards(480.0);
+    assert_eq!(card(&cards, "Miner Mk1 — Iron Ore").detail, "2 × Miner Mk1 on 2 normal nodes · 120 /min");
 }

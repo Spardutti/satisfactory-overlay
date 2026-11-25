@@ -72,12 +72,6 @@
         {#each extractors.tiers as t (t)}<option>{t}</option>{/each}
       </select>
     </label>
-    <label>
-      Node
-      <select bind:value={form.purity}>
-        {#each extractors.purities as p (p)}<option>{p}</option>{/each}
-      </select>
-    </label>
   </div>
 
   <div class="row">

@@ -51,6 +51,9 @@
     {#each row.machines as clock, i (i)}
       <rect class="machine" x={g.machineLeft} y={g.machineTop} width={m.machineWidth} height={g.machineHeight} rx="3" />
       <text class="tag" x={g.machineLeft + m.machineWidth / 2} y={g.machineTop + g.machineHeight / 2}>{tag}</text>
+      {#if row.node}
+        <text class="clock" x={g.machineLeft + m.machineWidth / 2} y={g.machineTop + 11}>{row.node.toUpperCase()}</text>
+      {/if}
       {#if clock < 99.95}
         <text class="clock" x={g.machineLeft + m.machineWidth / 2} y={g.machineTop + g.machineHeight / 2 + 12}>{fmt(clock)}%</text>
       {/if}

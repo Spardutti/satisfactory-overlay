@@ -135,7 +135,7 @@ fn apply_positions_moves_only_the_placed_block() {
 
 #[test]
 fn build_layout_rows_with_two_inputs_are_one_belt_taller() {
-    let one = Row { inputs: vec![], machines: vec![], output: belt_line() };
+    let one = Row { inputs: vec![], machines: vec![], output: belt_line(), node: None };
     let two = Row { inputs: vec![belt_line(), belt_line()], ..one.clone() };
     assert_eq!(place::row_height(&[two]) - place::row_height(&[one]), METRICS.input_step);
 }
@@ -162,6 +162,7 @@ fn ore_need(belts: Vec<crate::planner::BeltGroup>) -> RawNeed {
         capped: false,
         belts,
         goes_to: vec![],
+        nodes: None,
     }
 }
 
@@ -170,4 +171,13 @@ fn source_rows_two_30_miners_sharing_a_60_belt_are_two_rows_at_100() {
     let group = crate::planner::BeltGroup { machines: 2, per_min: 60.0, over: false };
     let rows = source_rows(&ore_need(vec![group]), 30.0);
     assert_eq!(rows.iter().map(|r| r.machines.clone()).collect::<Vec<_>>(), vec![vec![100.0], vec![100.0]]);
+}
+
+#[test]
+fn source_rows_listed_nodes_give_one_row_per_node_with_its_purity() {
+    let mut ore = ore_need(vec![]);
+    let rates = crate::planner::NodeRates { pure: 120.0, normal: 60.0, impure: 30.0, belt: 780.0 };
+    ore.nodes = Some(crate::planner::draw_from_nodes(150.0, crate::planner::NodeCounts { pure: 1, normal: 0, impure: 2 }, rates));
+    let rows: Vec<(Option<String>, f64)> = source_rows(&ore, 60.0).into_iter().map(|r| (r.node, r.output.per_min)).collect();
+    assert_eq!(rows, vec![(Some("pure".into()), 120.0), (Some("impure".into()), 30.0)]);
 }

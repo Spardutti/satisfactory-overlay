@@ -2,6 +2,7 @@ mod json_file;
 
 pub use json_file::{read_or_backup, write_json};
 
+use crate::planner::NodeRates;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
@@ -46,6 +47,12 @@ impl Extractors {
             rate if rate > 0.0 => Ok(rate),
             _ => Err(format!("Miner {tier} on {purity} nodes needs a rate above 0 in extractors.json")),
         }
+    }
+
+    /// What one miner of `tier` makes on each purity, with the `belt` that carries it.
+    pub fn node_rates(&self, tier: &str, belt: f64) -> Result<NodeRates, String> {
+        let rate = |purity: &str| self.miner_rate(tier, purity);
+        Ok(NodeRates { pure: rate("pure")?, normal: rate("normal")?, impure: rate("impure")?, belt })
     }
 }
 
@@ -103,6 +110,12 @@ mod tests {
     #[test]
     fn miner_rate_mk2_on_pure_node_is_240() {
         assert_eq!(extractors().miner_rate("Mk2", "pure"), Ok(240.0));
+    }
+
+    #[test]
+    fn node_rates_mk2_on_mk1_belt_keeps_full_miner_rates() {
+        let rates = extractors().node_rates("Mk2", 60.0).unwrap();
+        assert_eq!(rates, NodeRates { pure: 240.0, normal: 120.0, impure: 60.0, belt: 60.0 });
     }
 
     #[test]

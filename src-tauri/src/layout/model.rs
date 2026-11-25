@@ -50,6 +50,7 @@ pub struct Row {
     /// clock of each machine in the row, 100 unless it is the last one
     pub machines: Vec<f64>,
     pub output: BeltLine,
+    pub node: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -1,4 +1,5 @@
 use super::planning::calculate_request;
+use crate::planner::NodeCounts;
 use crate::plans::{checklist, ManualProgress, Plan, PlanRequest, PlanStore, ProgressSource};
 use crate::state::{lock, AppState};
 use serde::Deserialize;
@@ -29,12 +30,34 @@ pub struct StepChange {
     delta: i32,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NodesChange {
+    plan_id: String,
+    item: String,
+    nodes: NodeCounts,
+}
+
+/// Records the nodes found for one ore of a saved plan and recalculates it, keeping its progress.
+#[tauri::command]
+pub fn set_nodes(app: AppHandle, state: State<AppState>, change: NodesChange) -> Result<(), String> {
+    let mut request = lock(&state.plans).get_mut(&change.plan_id).ok_or("That plan no longer exists")?.request.clone();
+    request.set_nodes(change.item, change.nodes);
+    let steps = checklist(&calculate_request(&state, &request)?.result, &request.miner_tier);
+    change_plans(&app, |store| {
+        if let Some(plan) = store.get_mut(&change.plan_id) {
+            plan.request = request;
+            plan.replace_steps(steps);
+        }
+    })
+}
+
 /// Saves a new plan, or recalculates an existing one keeping its progress.
 #[tauri::command]
 pub fn save_plan(app: AppHandle, state: State<AppState>, draft: PlanDraft) -> Result<Plan, String> {
     let PlanDraft { id, name, request } = draft;
     let calculation = calculate_request(&state, &request)?;
-    let steps = checklist(&calculation.result, &request.miner_tier, &request.purity);
+    let steps = checklist(&calculation.result, &request.miner_tier);
     let id = id.unwrap_or_else(new_plan_id);
     let mut saved = None;
     change_plans(&app, |store| {

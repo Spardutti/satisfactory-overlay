@@ -1,6 +1,7 @@
 mod book;
 mod expand;
 mod limit;
+mod nodes;
 mod walk;
 mod result;
 mod targets;
@@ -8,6 +9,7 @@ mod transport;
 mod flows;
 
 pub use limit::{Limit, RawLeft};
+pub use nodes::{apply_nodes, draw_from_nodes, node_limit, NodeCounts, NodeDraw, NodeRates, NodeSupply};
 pub use result::{Flow, PlanResult, RawNeed, Step, Surplus, Usage};
 pub use targets::{targets, Target};
 pub use transport::{BeltGroup, Transport};
@@ -21,7 +23,7 @@ pub struct Planner<'a> {
     /// item id → recipe id the user picked for it
     pub choices: &'a HashMap<String, String>,
     pub enabled_alternates: &'a HashSet<String>,
-    /// items per minute one miner extracts, for the chosen tier and purity
+    /// items per minute one miner extracts on a normal node, for the chosen tier
     pub miner_rate: f64,
     pub transport: Transport,
 }
