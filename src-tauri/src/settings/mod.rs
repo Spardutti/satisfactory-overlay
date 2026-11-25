@@ -55,11 +55,20 @@ pub struct Logistics {
 
 impl Logistics {
     pub fn belt_speed(&self, tier: &str) -> Result<f64, String> {
-        self.belts.get(tier).copied().ok_or(format!("Unknown belt tier {tier}"))
+        positive_speed(&self.belts, "belt", tier)
     }
 
     pub fn pipe_speed(&self, tier: &str) -> Result<f64, String> {
-        self.pipes.get(tier).copied().ok_or(format!("Unknown pipe tier {tier}"))
+        positive_speed(&self.pipes, "pipe", tier)
+    }
+}
+
+/// A speed of 0 would ask for endless belt lines, so it is refused.
+fn positive_speed(speeds: &BTreeMap<String, f64>, kind: &str, tier: &str) -> Result<f64, String> {
+    match speeds.get(tier) {
+        None => Err(format!("Unknown {kind} tier {tier}")),
+        Some(speed) if *speed > 0.0 => Ok(*speed),
+        Some(_) => Err(format!("The {kind} tier {tier} needs a speed above 0 in logistics.json")),
     }
 }
 
@@ -125,6 +134,12 @@ mod tests {
     #[test]
     fn belt_speed_unknown_tier_is_an_error_naming_it() {
         assert_eq!(logistics().belt_speed("Mk9"), Err("Unknown belt tier Mk9".into()));
+    }
+
+    #[test]
+    fn belt_speed_of_zero_is_an_error() {
+        let zero = Logistics { belts: BTreeMap::from([("Mk1".to_string(), 0.0)]), pipes: BTreeMap::new() };
+        assert_eq!(zero.belt_speed("Mk1"), Err("The belt tier Mk1 needs a speed above 0 in logistics.json".into()));
     }
 
     #[test]
