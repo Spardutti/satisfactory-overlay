@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api, type Layout, type PlanStore } from "$lib/api";
+  import { listen } from "@tauri-apps/api/event";
+  import { api, PLANS_CHANGED, type Layout, type PlanStore } from "$lib/api";
   import Blueprint from "./Blueprint.svelte";
 
   let { planId = $bindable() }: { planId: string | null } = $props();
@@ -9,11 +10,23 @@
   let layout = $state<Layout | null>(null);
   let error = $state("");
 
-  onMount(async () => {
-    store = await api.listPlans();
-    planId ??= store.active ?? store.plans[0]?.id ?? null;
-    await load();
+  onMount(() => {
+    refresh().then(load);
+    const unlisten = listen(PLANS_CHANGED, onPlansChanged);
+    return () => unlisten.then((stop) => stop());
   });
+
+  async function refresh() {
+    store = await api.listPlans();
+    if (!store.plans.some((p) => p.id === planId)) planId = store.active ?? store.plans[0]?.id ?? null;
+  }
+
+  /** Reloads the blueprint only when its plan is gone; a drag here also fires this event. */
+  async function onPlansChanged() {
+    const before = planId;
+    await refresh();
+    if (planId !== before) await load();
+  }
 
   async function load() {
     layout = null;
@@ -32,8 +45,12 @@
 
   async function resetLayout() {
     if (!planId) return;
-    await api.resetLayout(planId);
-    await load();
+    try {
+      await api.resetLayout(planId);
+      await load();
+    } catch (e) {
+      error = String(e);
+    }
   }
 </script>
 

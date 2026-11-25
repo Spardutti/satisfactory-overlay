@@ -14,7 +14,7 @@
 
   let screen = $state<HTMLDivElement>();
   let view = $state<View>({ scale: 1, x: 0, y: 0 });
-  let drag: { x: number; y: number; block: Block | null } | null = null;
+  let drag: { x: number; y: number; block: Block | null; moved: boolean } | null = null;
 
   function fit() {
     if (!screen) return;
@@ -31,11 +31,12 @@
 
   /** Dragging a block moves it; dragging anywhere else moves the view. */
   function onDown(e: PointerEvent) {
+    if (e.button !== 0) return;
     const target = e.target as Element;
     if (target.closest("button")) return;
     const item = target.closest("[data-block]")?.getAttribute("data-block");
     const block = layout.blocks.find((b) => b.item === item) ?? null;
-    drag = { x: e.clientX, y: e.clientY, block };
+    drag = { x: e.clientX, y: e.clientY, block, moved: false };
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
   }
 
@@ -48,18 +49,19 @@
     } else {
       view = panBy(view, dx, dy);
     }
-    drag = { ...drag, x: e.clientX, y: e.clientY };
+    drag = { ...drag, x: e.clientX, y: e.clientY, moved: drag.moved || dx !== 0 || dy !== 0 };
   }
 
+  /** Also runs when the pointer is lost mid-drag, e.g. on alt-tab, so a drag never sticks. */
   function onUp() {
-    if (drag?.block) onMoved(drag.block.item, Math.round(drag.block.x), Math.round(drag.block.y));
+    if (drag?.block && drag.moved) onMoved(drag.block.item, Math.round(drag.block.x), Math.round(drag.block.y));
     drag = null;
   }
 
   const routes = $derived(buildRoutes(layout));
 </script>
 
-<div class="screen" bind:this={screen} onwheel={onWheel} onpointerdown={onDown} onpointermove={onMove} onpointerup={onUp} role="application" aria-label="Plan blueprint">
+<div class="screen" bind:this={screen} onwheel={onWheel} onpointerdown={onDown} onpointermove={onMove} onpointerup={onUp} onpointercancel={onUp} onlostpointercapture={onUp} role="application" aria-label="Plan blueprint">
   <svg width="100%" height="100%">
     <g transform="translate({view.x} {view.y}) scale({view.scale})">
       {#each routes.trunks as trunk, i (i)}<Belt d={trunk.d} color={itemColor(trunk.item)} fluid={trunk.fluid} />{/each}
