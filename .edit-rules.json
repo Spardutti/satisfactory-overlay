@@ -19,6 +19,11 @@
       "id": "miner-clock-against-own-rate",
       "files": "^src-tauri/src/(planner|layout|plans|commands)/.*\\.rs$",
       "message": "A miner's clock is what it pulls divided by its own rate, never by a rate already cut to the belt (that showed 50% where 12.5% was right)."
+    },
+    {
+      "id": "click-survives-wobble",
+      "files": "^src/lib/layout/.*\\.svelte$",
+      "message": "A press counts as a drag only after it moves a few pixels from where it started; anything less is a click (a 1px wobble once lost clicks and saved stray block moves)."
     }
   ]
 }

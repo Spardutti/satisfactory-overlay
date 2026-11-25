@@ -21,7 +21,10 @@
 
   let screen = $state<HTMLDivElement>();
   let view = $state<View>({ scale: 1, x: 0, y: 0 });
-  let drag: { x: number; y: number; block: Block | null; row: number | null; moved: boolean } | null = null;
+  type Drag = { startX: number; startY: number; x: number; y: number; block: Block | null; row: number | null; moved: boolean };
+  let drag: Drag | null = null;
+  /** Pixels a press may wobble and still count as a click. */
+  const CLICK_SLOP = 4;
 
   function fit() {
     if (!screen) return;
@@ -44,12 +47,14 @@
     const item = target.closest("[data-block]")?.getAttribute("data-block");
     const block = layout.blocks.find((b) => b.item === item) ?? null;
     const row = target.closest("[data-row]")?.getAttribute("data-row");
-    drag = { x: e.clientX, y: e.clientY, block, row: row == null ? null : Number(row), moved: false };
+    const [x, y] = [e.clientX, e.clientY];
+    drag = { startX: x, startY: y, x, y, block, row: row == null ? null : Number(row), moved: false };
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
   }
 
   function onMove(e: PointerEvent) {
     if (!drag) return;
+    if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < CLICK_SLOP) return;
     const [dx, dy] = [e.clientX - drag.x, e.clientY - drag.y];
     if (drag.block) {
       drag.block.x += dx / view.scale;
@@ -57,7 +62,7 @@
     } else {
       view = panBy(view, dx, dy);
     }
-    drag = { ...drag, x: e.clientX, y: e.clientY, moved: drag.moved || dx !== 0 || dy !== 0 };
+    drag = { ...drag, x: e.clientX, y: e.clientY, moved: true };
   }
 
   /** Also runs when the pointer is lost mid-drag, e.g. on alt-tab, so a drag never sticks. */
