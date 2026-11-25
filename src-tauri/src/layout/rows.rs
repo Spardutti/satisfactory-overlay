@@ -16,11 +16,18 @@ pub fn step_rows(step: &Step, transport: Transport) -> Vec<Row> {
         .collect()
 }
 
+/// A miner's own rate on a normal node, and the belt that may hold it back.
+#[derive(Debug, Clone, Copy)]
+pub struct MinerSpeed {
+    pub rate: f64,
+    pub belt: f64,
+}
+
 /// One row per miner, or per line for fluids and gathered items.
-pub fn source_rows(raw: &RawNeed, per_miner: f64) -> Vec<Row> {
+pub fn source_rows(raw: &RawNeed, miner: MinerSpeed) -> Vec<Row> {
     match &raw.nodes {
         Some(supply) => supply.draws.iter().map(|draw| node_row(raw, draw)).collect(),
-        None => raw.belts.iter().flat_map(|group| group_rows(raw, group, per_miner)).collect(),
+        None => raw.belts.iter().flat_map(|group| group_rows(raw, group, miner)).collect(),
     }
 }
 
@@ -37,8 +44,9 @@ fn ore_line(raw: &RawNeed, per_min: f64, over: bool) -> BeltLine {
     BeltLine { item: raw.item.clone(), item_name: raw.item_name.clone(), per_min, fluid: raw.fluid, over }
 }
 
-/// Miners that share a belt each get a row; all run at 100% but the last.
-fn group_rows(raw: &RawNeed, group: &BeltGroup, per_miner: f64) -> Vec<Row> {
+/// Miners that share a belt each get a row; all fill their share but the last.
+fn group_rows(raw: &RawNeed, group: &BeltGroup, miner: MinerSpeed) -> Vec<Row> {
+    let per_miner = miner.rate.min(miner.belt);
     let line = |per_min: f64, machines: Vec<f64>| Row { inputs: vec![], machines, output: ore_line(raw, per_min, group.over), node: None };
     if group.machines == 0 {
         return vec![line(group.per_min, vec![])];
@@ -47,7 +55,10 @@ fn group_rows(raw: &RawNeed, group: &BeltGroup, per_miner: f64) -> Vec<Row> {
     let last_pct = (exact - f64::from(group.machines - 1)) * 100.0;
     machine_clocks(group.machines, last_pct)
         .into_iter()
-        .map(|clock| line(per_miner * clock / 100.0, vec![clock]))
+        .map(|share| {
+            let per_min = per_miner * share / 100.0;
+            line(per_min, vec![per_min / miner.rate * 100.0])
+        })
         .collect()
 }
 

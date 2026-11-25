@@ -35,6 +35,11 @@
   async function load() {
     layout = null;
     calc = null;
+    await fetchPlan();
+  }
+
+  /** Swaps in fresh data without clearing first, so the view and the open panel stay put. */
+  async function fetchPlan() {
     if (!planId) return;
     try {
       layout = await api.planLayout(planId);
@@ -54,7 +59,7 @@
     try {
       await api.setNodes({ planId, item, nodes });
       await refresh();
-      await load();
+      await fetchPlan();
     } catch (e) {
       error = String(e);
     }
@@ -85,7 +90,7 @@
     <div class="pad"><NodesPanel {calc} nodes={plan.request.nodes} onChange={setNodes} /></div>
   {/if}
   {#if layout}
-    {#key layout}
+    {#key planId}
       <Blueprint bind:layout onMoved={saveMove} />
     {/key}
   {:else if !store.plans.length}
