@@ -4,7 +4,7 @@ export type Named = { id: string; name: string };
 export type Target = Named & { standard: { buildingName: string; perMachine: number } | null };
 export type DataSummary = { path: string; items: number; recipes: number; warnings: string[] };
 export type Alternate = { id: string; name: string; makes: string; enabled: boolean };
-export type ExtractorOptions = { tiers: string[]; purities: string[]; belts: string[]; pipes: string[] };
+export type ExtractorOptions = { tiers: string[]; belts: string[]; pipes: string[] };
 export type BeltGroup = { machines: number; perMin: number; over: boolean };
 export type Flow = { item: string; itemName: string; perMin: number; fluid: boolean; belts: BeltGroup[] };
 export type Usage = { itemName: string; perMin: number };
@@ -15,10 +15,10 @@ export type PlanRequest = {
   target: string;
   mode: Mode;
   minerTier: string;
-  purity: string;
   beltTier: string;
   pipeTier: string;
   choices: Record<string, string>;
+  nodes: Record<string, NodeCounts>;
 };
 
 export type Step = {
@@ -46,7 +46,11 @@ export type RawNeed = {
   miners: number | null;
   belts: BeltGroup[];
   goesTo: Usage[];
+  nodes: NodeSupply | null;
 };
+export type NodeCounts = { pure: number; normal: number; impure: number };
+export type NodeDraw = { purity: string; perMin: number; clock: number };
+export type NodeSupply = { draws: NodeDraw[]; spare: NodeCounts; short: number };
 export type Surplus = { item: string; itemName: string; perMin: number };
 export type RawLeft = { item: string; itemName: string; available: number; used: number; left: number };
 export type Limit = { maxRate: number; limiting: string; limitingName: string; resources: RawLeft[] };
@@ -55,6 +59,8 @@ export type RecipeOption = { id: string; name: string; alternate: boolean };
 export type Calculation = {
   result: { target: string; targetName: string; rate: number; raw: RawNeed[]; steps: Step[]; surplus: Surplus[] };
   limit: Limit | null;
+  /** the most target per minute the listed nodes allow, when an ore runs short */
+  nodeLimit: number | null;
   options: Record<string, RecipeOption[]>;
   cards: ChecklistStep[];
 };
@@ -77,7 +83,7 @@ export type HotkeyStatus = {
 };
 
 export type BeltLine = { item: string; itemName: string; perMin: number; fluid: boolean; over: boolean };
-export type LayoutRow = { inputs: BeltLine[]; machines: number[]; output: BeltLine };
+export type LayoutRow = { inputs: BeltLine[]; machines: number[]; output: BeltLine; node: string | null };
 export type Block = {
   item: string;
   title: string;
@@ -119,6 +125,7 @@ export const api = {
   planLayout: (planId: string) => invoke<Layout>("plan_layout", { planId }),
   moveBlock: (change: { planId: string; item: string; x: number; y: number }) => invoke<void>("move_block", { change }),
   resetLayout: (planId: string) => invoke<void>("reset_layout", { planId }),
+  setNodes: (change: { planId: string; item: string; nodes: NodeCounts }) => invoke<void>("set_nodes", { change }),
   listPlans: () => invoke<PlanStore>("list_plans"),
   savePlan: (draft: { id: string | null; name: string; request: PlanRequest }) =>
     invoke<Plan>("save_plan", { draft }),

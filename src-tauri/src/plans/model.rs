@@ -1,3 +1,4 @@
+use crate::planner::NodeCounts;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 
@@ -14,13 +15,23 @@ pub struct PlanRequest {
     pub target: String,
     pub mode: Mode,
     pub miner_tier: String,
-    pub purity: String,
     #[serde(default = "first_tier")]
     pub belt_tier: String,
     #[serde(default = "first_tier")]
     pub pipe_tier: String,
     #[serde(default)]
     pub choices: HashMap<String, String>,
+    #[serde(default)]
+    pub nodes: BTreeMap<String, NodeCounts>,
+}
+
+impl PlanRequest {
+    pub fn set_nodes(&mut self, item: String, counts: NodeCounts) {
+        match counts == NodeCounts::default() {
+            true => self.nodes.remove(&item),
+            false => self.nodes.insert(item, counts),
+        };
+    }
 }
 
 /// Plans saved before belts and pipes existed get the slowest tier.

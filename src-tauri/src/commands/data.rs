@@ -110,7 +110,6 @@ pub fn set_alternate(state: State<AppState>, id: String, enabled: bool) -> Resul
 #[serde(rename_all = "camelCase")]
 pub struct ExtractorOptions {
     tiers: Vec<String>,
-    purities: Vec<String>,
     belts: Vec<String>,
     pipes: Vec<String>,
 }
@@ -120,7 +119,6 @@ pub fn extractor_options(state: State<AppState>) -> ExtractorOptions {
     let (extractors, logistics) = (&state.editable.extractors, &state.editable.logistics);
     ExtractorOptions {
         tiers: extractors.miners.keys().cloned().collect(),
-        purities: extractors.purity.keys().cloned().collect(),
         belts: logistics.belts.keys().cloned().collect(),
         pipes: logistics.pipes.keys().cloned().collect(),
     }

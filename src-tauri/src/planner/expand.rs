@@ -90,6 +90,7 @@ impl Planner<'_> {
                     capped: minable && self.miner_rate > self.transport.belt,
                     belts: self.raw_belts(item, per_min),
                     goes_to: vec![],
+                    nodes: None,
                 }
             })
             .collect()

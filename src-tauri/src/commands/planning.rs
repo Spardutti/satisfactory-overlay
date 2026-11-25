@@ -1,5 +1,5 @@
 use crate::game_data::GameData;
-use crate::planner::{Limit, PlanResult, Planner, Transport};
+use crate::planner::{apply_nodes, node_limit, Limit, PlanResult, Planner, Transport};
 use crate::plans::{checklist, ChecklistStep, Mode, PlanRequest};
 use crate::state::{lock, AppState};
 use serde::Serialize;
@@ -19,6 +19,8 @@ pub struct RecipeOption {
 pub struct Calculation {
     pub result: PlanResult,
     pub limit: Option<Limit>,
+    /// the most target per minute the listed nodes allow, when an ore runs short
+    pub node_limit: Option<f64>,
     /// the same build cards the overlay shows
     pub cards: Vec<ChecklistStep>,
     /// item id → recipes the user may pick for that step
@@ -31,8 +33,10 @@ pub fn calculate(state: State<AppState>, request: PlanRequest) -> Result<Calcula
 }
 
 pub fn calculate_request(state: &AppState, request: &PlanRequest) -> Result<Calculation, String> {
-    let miner_rate = state.editable.extractors.miner_rate(&request.miner_tier, &request.purity)?;
+    let extractors = &state.editable.extractors;
+    let miner_rate = extractors.miner_rate(&request.miner_tier, "normal")?;
     let transport = transport_for(state, request)?;
+    let node_rates = extractors.node_rates(&request.miner_tier, transport.belt)?;
     let alternates: HashSet<String> = lock(&state.config).enabled_alternates.iter().cloned().collect();
     let game = lock(&state.game);
     let data: &GameData = game.as_ref().ok_or("Game data is not loaded yet")?;
@@ -44,10 +48,12 @@ pub fn calculate_request(state: &AppState, request: &PlanRequest) -> Result<Calc
         miner_rate,
         transport,
     };
-    let (result, limit) = run_mode(&planner, request)?;
+    let (mut result, limit) = run_mode(&planner, request)?;
+    apply_nodes(&mut result, &request.nodes, node_rates);
+    let node_limit = node_limit(&result);
     let options = result.steps.iter().map(|s| (s.item.clone(), options_for(&planner, &s.item))).collect();
-    let cards = checklist(&result, &request.miner_tier, &request.purity);
-    Ok(Calculation { result, limit, options, cards })
+    let cards = checklist(&result, &request.miner_tier);
+    Ok(Calculation { result, limit, node_limit, options, cards })
 }
 
 pub fn transport_for(state: &AppState, request: &PlanRequest) -> Result<Transport, String> {

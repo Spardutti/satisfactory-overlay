@@ -25,7 +25,7 @@ pub fn plan_layout(state: State<AppState>, plan_id: String) -> Result<Layout, St
         .ok_or("That plan no longer exists")?;
     let calculation = calculate_request(&state, &plan.request)?;
     let transport = transport_for(&state, &plan.request)?;
-    let miner_rate = state.editable.extractors.miner_rate(&plan.request.miner_tier, &plan.request.purity)?;
+    let miner_rate = state.editable.extractors.miner_rate(&plan.request.miner_tier, "normal")?;
     let mut layout = build_layout(&calculation.result, transport, miner_rate.min(transport.belt));
     apply_positions(&mut layout, &plan.positions);
     Ok(layout)

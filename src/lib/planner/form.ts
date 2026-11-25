@@ -1,4 +1,4 @@
-import type { Named, Plan, PlanRequest } from "$lib/api";
+import type { Named, NodeCounts, Plan, PlanRequest } from "$lib/api";
 
 export type ResourceRow = { item: string; amount: number };
 
@@ -8,10 +8,10 @@ export type FormState = {
   rate: number;
   resources: ResourceRow[];
   minerTier: string;
-  purity: string;
   beltTier: string;
   pipeTier: string;
   choices: Record<string, string>;
+  nodes: Record<string, NodeCounts>;
 };
 
 export function emptyForm(): FormState {
@@ -21,10 +21,10 @@ export function emptyForm(): FormState {
     rate: 60,
     resources: [{ item: "Desc_OreIron_C", amount: 60 }],
     minerTier: "Mk1",
-    purity: "normal",
     beltTier: "Mk1",
     pipeTier: "Mk1",
     choices: {},
+    nodes: {},
   };
 }
 
@@ -46,8 +46,8 @@ export function toRequest(form: FormState, targets: Named[]): PlanRequest | stri
     form.mode === "rate"
       ? { kind: "rate" as const, rate: form.rate }
       : { kind: "resources" as const, available: totalPerItem(form.resources) };
-  const { minerTier, purity, beltTier, pipeTier, choices } = form;
-  return { target: target.id, mode, minerTier, purity, beltTier, pipeTier, choices };
+  const { minerTier, beltTier, pipeTier, choices, nodes } = form;
+  return { target: target.id, mode, minerTier, beltTier, pipeTier, choices, nodes };
 }
 
 function isAmount(value: number | null): boolean {
@@ -64,8 +64,9 @@ function totalPerItem(rows: ResourceRow[]): Record<string, number> {
 export function fromPlan(plan: Plan, targets: Named[]): FormState {
   const { request } = plan;
   const targetName = targets.find((t) => t.id === request.target)?.name ?? request.target;
-  const { minerTier, purity, beltTier, pipeTier } = request;
-  const base = { ...emptyForm(), targetName, minerTier, purity, beltTier, pipeTier, choices: { ...request.choices } };
+  const { minerTier, beltTier, pipeTier } = request;
+  const choices = { ...request.choices };
+  const base = { ...emptyForm(), targetName, minerTier, beltTier, pipeTier, choices, nodes: { ...request.nodes } };
   if (request.mode.kind === "rate") return { ...base, mode: "rate", rate: request.mode.rate };
   const resources = Object.entries(request.mode.available).map(([item, amount]) => ({ item, amount }));
   return { ...base, mode: "resources", resources };

@@ -1,19 +1,19 @@
-use super::card_text::{belts_text, goes_to_text, round};
+use super::card_text::{belts_text, goes_to_text, nodes_text, round};
 use super::model::ChecklistStep;
 use crate::planner::{PlanResult, RawNeed, Step};
 
 /// Turns a calculation into build-order cards: miners first, final product last.
-pub fn checklist(result: &PlanResult, miner_tier: &str, purity: &str) -> Vec<ChecklistStep> {
-    let miners = result.raw.iter().filter_map(|raw| miner_card(raw, miner_tier, purity));
+pub fn checklist(result: &PlanResult, miner_tier: &str) -> Vec<ChecklistStep> {
+    let miners = result.raw.iter().filter_map(|raw| miner_card(raw, miner_tier));
     let machines = result.steps.iter().map(machine_card);
     miners.chain(machines).filter(|s| s.total > 0).collect()
 }
 
-fn miner_card(raw: &RawNeed, tier: &str, purity: &str) -> Option<ChecklistStep> {
+fn miner_card(raw: &RawNeed, tier: &str) -> Option<ChecklistStep> {
     let miners = raw.miners?;
     Some(ChecklistStep {
         label: format!("Miner {tier} — {}", raw.item_name),
-        detail: miner_detail(raw, tier, purity),
+        detail: miner_detail(raw, tier),
         total: miners,
         built: 0,
         inputs: vec![],
@@ -23,11 +23,15 @@ fn miner_card(raw: &RawNeed, tier: &str, purity: &str) -> Option<ChecklistStep> 
     })
 }
 
-/// "2 × Miner Mk2 on 2 normal nodes · 120 /min", plus a warning when the belt holds miners back.
-fn miner_detail(raw: &RawNeed, tier: &str, purity: &str) -> String {
+/// "3 × Miner Mk2 on 1 pure + 2 impure nodes · 360 /min · 40 short", plus a warning when the belt holds miners back.
+fn miner_detail(raw: &RawNeed, tier: &str) -> String {
     let miners = raw.miners.unwrap_or(0);
-    let nodes = if miners == 1 { "node" } else { "nodes" };
-    let base = format!("{miners} × Miner {tier} on {miners} {purity} {nodes} · {} /min", round(raw.per_min));
+    let short = raw.nodes.as_ref().map_or(0.0, |n| n.short);
+    let nodes = raw.nodes.as_ref().map_or_else(|| nodes_text(&vec!["normal"; miners as usize]), |n| {
+        nodes_text(&n.draws.iter().map(|d| d.purity.as_str()).collect::<Vec<_>>())
+    });
+    let base = format!("{miners} × Miner {tier} on {nodes} · {} /min", round(raw.per_min - short));
+    let base = if short > 0.0 { format!("{base} · {} short", round(short)) } else { base };
     match raw.capped {
         true => format!("{base} · the belt holds each miner back, a faster belt needs fewer nodes"),
         false => base,

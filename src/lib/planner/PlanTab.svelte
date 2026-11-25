@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api, type Calculation, type ExtractorOptions, type Named, type Plan, type Target } from "$lib/api";
+  import { api, type Calculation, type ExtractorOptions, type Named, type NodeCounts, type Plan, type Target } from "$lib/api";
   import { defaultName, emptyForm, fromPlan, toRequest } from "./form";
+  import NodesPanel from "./NodesPanel.svelte";
   import PlanForm from "./PlanForm.svelte";
   import ResultView from "./ResultView.svelte";
 
@@ -9,7 +10,7 @@
 
   let targets = $state<Target[]>([]);
   let raws = $state<Named[]>([]);
-  let extractors = $state<ExtractorOptions>({ tiers: [], purities: [], belts: [], pipes: [] });
+  let extractors = $state<ExtractorOptions>({ tiers: [], belts: [], pipes: [] });
   let form = $state(emptyForm());
   let calc = $state<Calculation | null>(null);
   let error = $state("");
@@ -48,6 +49,12 @@
     calculate();
   }
 
+  function setNodes(item: string, counts: NodeCounts) {
+    if (counts.pure + counts.normal + counts.impure === 0) delete form.nodes[item];
+    else form.nodes[item] = counts;
+    calculate();
+  }
+
   function resetChoices() {
     form.choices = {};
     calculate();
@@ -82,6 +89,7 @@
         <button class="primary" onclick={save}>{planId ? "Update plan" : "Save as plan"}</button>
         {#if savedNote}<span class="muted">{savedNote}</span>{/if}
       </div>
+      <NodesPanel {calc} nodes={form.nodes} onChange={setNodes} />
       <ResultView {calc} choices={form.choices} onChoose={choose} />
     {:else if !error}
       <p class="muted">Pick a target and press Calculate.</p>
