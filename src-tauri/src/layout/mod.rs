@@ -10,12 +10,13 @@ use crate::planner::{PlanResult, RawNeed, Step, Transport};
 use bus::{input_buses, output_buses};
 use connect::connect;
 use place::{block_size, place_columns, row_height, METRICS};
-use rows::{source_rows, step_rows};
+use rows::{source_rows, step_rows, MinerSpeed};
 use std::collections::BTreeMap;
 
-/// `per_miner` is what one miner delivers once its belt is taken into account.
-pub fn build_layout(result: &PlanResult, transport: Transport, per_miner: f64) -> Layout {
-    let raw = result.raw.iter().map(|raw| (0, source_block(raw, per_miner, transport)));
+/// `miner_rate` is what one miner makes on a normal node, before its belt holds it back.
+pub fn build_layout(result: &PlanResult, transport: Transport, miner_rate: f64) -> Layout {
+    let miner = MinerSpeed { rate: miner_rate, belt: transport.belt };
+    let raw = result.raw.iter().map(|raw| (0, source_block(raw, miner, transport)));
     let made = result.steps.iter().map(|step| (step.level, step_block(step, transport)));
     let mut blocks: Vec<(u32, Block)> = raw.chain(made).collect();
     let (width, height) = place_columns(&mut blocks);
@@ -39,10 +40,10 @@ struct Head<'a> {
     building: &'a str,
 }
 
-fn source_block(raw: &RawNeed, per_miner: f64, transport: Transport) -> Block {
+fn source_block(raw: &RawNeed, miner: MinerSpeed, transport: Transport) -> Block {
     let building = if raw.miners.is_some() { "Miner" } else { "Bring in" };
     let head = Head { item: &raw.item, title: &raw.item_name, building };
-    block(head, source_rows(raw, per_miner), transport)
+    block(head, source_rows(raw, miner), transport)
 }
 
 fn step_block(step: &Step, transport: Transport) -> Block {
