@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 const DEFAULT_RAW: &str = include_str!("../../../config/raw_resources.json");
 const DEFAULT_EXTRACTORS: &str = include_str!("../../../config/extractors.json");
+const DEFAULT_LOGISTICS: &str = include_str!("../../../config/logistics.json");
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -45,10 +46,28 @@ impl Extractors {
     }
 }
 
+/// Items per minute one belt or pipe line carries, per tier.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Logistics {
+    pub belts: BTreeMap<String, f64>,
+    pub pipes: BTreeMap<String, f64>,
+}
+
+impl Logistics {
+    pub fn belt_speed(&self, tier: &str) -> Result<f64, String> {
+        self.belts.get(tier).copied().ok_or(format!("Unknown belt tier {tier}"))
+    }
+
+    pub fn pipe_speed(&self, tier: &str) -> Result<f64, String> {
+        self.pipes.get(tier).copied().ok_or(format!("Unknown pipe tier {tier}"))
+    }
+}
+
 /// The user-editable files in the app config folder, created from defaults on first run.
 pub struct Editable {
     pub raw: HashSet<String>,
     pub extractors: Extractors,
+    pub logistics: Logistics,
 }
 
 pub fn load_editable(config_dir: &Path, notices: &mut Vec<String>) -> Editable {
@@ -56,7 +75,9 @@ pub fn load_editable(config_dir: &Path, notices: &mut Vec<String>) -> Editable {
         json_file::read_user_file(&config_dir.join("raw_resources.json"), DEFAULT_RAW, notices);
     let extractors =
         json_file::read_user_file(&config_dir.join("extractors.json"), DEFAULT_EXTRACTORS, notices);
-    Editable { raw: raw.into_iter().collect(), extractors }
+    let logistics =
+        json_file::read_user_file(&config_dir.join("logistics.json"), DEFAULT_LOGISTICS, notices);
+    Editable { raw: raw.into_iter().collect(), extractors, logistics }
 }
 
 #[cfg(test)]
@@ -90,6 +111,25 @@ mod tests {
         assert!(editable.raw.contains("Desc_OreIron_C"));
         assert!(dir.join("raw_resources.json").is_file());
         assert!(dir.join("extractors.json").is_file());
+    }
+
+    fn logistics() -> Logistics {
+        serde_json::from_str(DEFAULT_LOGISTICS).unwrap()
+    }
+
+    #[test]
+    fn belt_speed_mk3_is_270() {
+        assert_eq!(logistics().belt_speed("Mk3"), Ok(270.0));
+    }
+
+    #[test]
+    fn belt_speed_unknown_tier_is_an_error_naming_it() {
+        assert_eq!(logistics().belt_speed("Mk9"), Err("Unknown belt tier Mk9".into()));
+    }
+
+    #[test]
+    fn pipe_speed_mk2_is_600() {
+        assert_eq!(logistics().pipe_speed("Mk2"), Ok(600.0));
     }
 
     #[test]

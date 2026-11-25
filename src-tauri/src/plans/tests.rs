@@ -3,7 +3,7 @@ use super::*;
 use std::collections::HashMap;
 
 fn step(label: &str, total: u32, built: u32) -> ChecklistStep {
-    ChecklistStep { label: label.into(), detail: String::new(), total, built }
+    ChecklistStep { label: label.into(), total, built, ..ChecklistStep::default() }
 }
 
 fn plan(id: &str, steps: Vec<ChecklistStep>) -> Plan {
@@ -12,6 +12,8 @@ fn plan(id: &str, steps: Vec<ChecklistStep>) -> Plan {
         mode: Mode::Rate { rate: 120.0 },
         miner_tier: "Mk1".into(),
         purity: "normal".into(),
+        belt_tier: "Mk1".into(),
+        pipe_tier: "Mk1".into(),
         choices: HashMap::new(),
     };
     Plan { id: id.into(), name: id.into(), request, steps }
