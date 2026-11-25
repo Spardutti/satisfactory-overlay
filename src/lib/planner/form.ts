@@ -9,6 +9,8 @@ export type FormState = {
   resources: ResourceRow[];
   minerTier: string;
   purity: string;
+  beltTier: string;
+  pipeTier: string;
   choices: Record<string, string>;
 };
 
@@ -20,6 +22,8 @@ export function emptyForm(): FormState {
     resources: [{ item: "Desc_OreIron_C", amount: 60 }],
     minerTier: "Mk1",
     purity: "normal",
+    beltTier: "Mk1",
+    pipeTier: "Mk1",
     choices: {},
   };
 }
@@ -35,7 +39,8 @@ export function toRequest(form: FormState, targets: Named[]): PlanRequest | stri
     form.mode === "rate"
       ? { kind: "rate" as const, rate: form.rate }
       : { kind: "resources" as const, available: totalPerItem(form.resources) };
-  return { target: target.id, mode, minerTier: form.minerTier, purity: form.purity, choices: form.choices };
+  const { minerTier, purity, beltTier, pipeTier, choices } = form;
+  return { target: target.id, mode, minerTier, purity, beltTier, pipeTier, choices };
 }
 
 function isAmount(value: number | null): boolean {
@@ -52,7 +57,8 @@ function totalPerItem(rows: ResourceRow[]): Record<string, number> {
 export function fromPlan(plan: Plan, targets: Named[]): FormState {
   const { request } = plan;
   const targetName = targets.find((t) => t.id === request.target)?.name ?? request.target;
-  const base = { ...emptyForm(), targetName, minerTier: request.minerTier, purity: request.purity, choices: { ...request.choices } };
+  const { minerTier, purity, beltTier, pipeTier } = request;
+  const base = { ...emptyForm(), targetName, minerTier, purity, beltTier, pipeTier, choices: { ...request.choices } };
   if (request.mode.kind === "rate") return { ...base, mode: "rate", rate: request.mode.rate };
   const resources = Object.entries(request.mode.available).map(([item, amount]) => ({ item, amount }));
   return { ...base, mode: "resources", resources };

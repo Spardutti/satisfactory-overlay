@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fmt, type Calculation } from "$lib/api";
+  import StepCard from "$lib/StepCard.svelte";
 
   let {
     calc,
@@ -11,8 +12,8 @@
     onChoose: (item: string, recipeId: string) => void;
   } = $props();
 
-  const levels = $derived([...new Set(calc.result.steps.map((s) => s.level))]);
-  const top = $derived(Math.max(...levels));
+  const stepByItem = $derived(new Map(calc.result.steps.map((s) => [s.item, s])));
+  const unmined = $derived(calc.result.raw.filter((r) => r.miners === null));
 </script>
 
 <div class="result">
@@ -28,36 +29,28 @@
     </div>
   {/if}
 
-  <h3>1 · Extraction</h3>
-  <ul>
-    {#each calc.result.raw as r (r.item)}
-      <li>
-        {r.itemName}: {fmt(r.perMin)} {r.fluid ? "m³" : ""}/min
-        {#if r.miners !== null}<span class="muted">· {r.miners} miner{r.miners === 1 ? "" : "s"}</span>{/if}
-      </li>
-    {/each}
-  </ul>
+  {#if unmined.length}
+    <h3>Bring in</h3>
+    <ul>
+      {#each unmined as r (r.item)}
+        <li>{r.itemName}: {fmt(r.perMin)} {r.fluid ? "m³" : ""}/min</li>
+      {/each}
+    </ul>
+  {/if}
 
-  {#each levels as level (level)}
-    <h3>{level + 1} · {level === top ? "Final product" : `Tier ${level}`}</h3>
-    {#each calc.result.steps.filter((s) => s.level === level) as step (step.item)}
-      {@const options = calc.options[step.item] ?? []}
-      <div class="step">
-        <span class="count">{step.machines}×</span>
-        <span>{step.buildingName}</span>
-        {#if options.length > 1}
-          <select value={choices[step.item] ?? step.recipeId} onchange={(e) => onChoose(step.item, e.currentTarget.value)}>
+  <h3>Build in this order</h3>
+  {#each calc.cards as card, i (card.label)}
+    {@const options = calc.options[card.item] ?? []}
+    {@const step = stepByItem.get(card.item)}
+    <StepCard {card} number={i + 1}>
+      {#snippet controls()}
+        {#if step && options.length > 1}
+          <select value={choices[card.item] ?? step.recipeId} onchange={(e) => onChoose(card.item, e.currentTarget.value)}>
             {#each options as o (o.id)}<option value={o.id}>{o.name}</option>{/each}
           </select>
-        {:else}
-          <span class="recipe">{step.recipeName}</span>
         {/if}
-        <span class="muted">
-          {fmt(step.outputPerMin)}/min · {fmt(step.machinesExact)} exact
-          {#if step.lastMachinePct < 99.95}· last at {fmt(step.lastMachinePct)}%{/if}
-        </span>
-      </div>
-    {/each}
+      {/snippet}
+    </StepCard>
   {/each}
 
   {#if calc.result.surplus.length}
@@ -80,20 +73,5 @@
     padding: 8px 12px;
     background: var(--panel-2);
     border-left: 3px solid var(--orange);
-  }
-  .step {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    padding: 4px 0;
-    border-bottom: 1px solid var(--line);
-  }
-  .count {
-    min-width: 32px;
-    color: var(--orange);
-    font-weight: 600;
-  }
-  .recipe {
-    padding: 4px 8px;
   }
 </style>
