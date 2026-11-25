@@ -30,7 +30,9 @@ export function emptyForm(): FormState {
 
 /** What a new plan is called unless the player names it, e.g. "Nuclear Pasta · Miner Mk2 · Belt Mk5 · Pipe Mk2". */
 export function defaultName(form: FormState): string {
-  return `${form.targetName.trim()} · Miner ${form.minerTier} · Belt ${form.beltTier} · Pipe ${form.pipeTier}`;
+  const target = form.targetName.trim();
+  if (!target) return "Plan name";
+  return `${target} · Miner ${form.minerTier} · Belt ${form.beltTier} · Pipe ${form.pipeTier}`;
 }
 
 /** The request for the form, or an error message when the target is not a known item. */
