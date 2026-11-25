@@ -42,7 +42,10 @@ impl Extractors {
     pub fn miner_rate(&self, tier: &str, purity: &str) -> Result<f64, String> {
         let base = self.miners.get(tier).ok_or(format!("Unknown miner tier {tier}"))?;
         let factor = self.purity.get(purity).ok_or(format!("Unknown node purity {purity}"))?;
-        Ok(base * factor)
+        match base * factor {
+            rate if rate > 0.0 => Ok(rate),
+            _ => Err(format!("Miner {tier} on {purity} nodes needs a rate above 0 in extractors.json")),
+        }
     }
 }
 
@@ -105,6 +108,16 @@ mod tests {
     #[test]
     fn miner_rate_mk1_on_impure_node_is_30() {
         assert_eq!(extractors().miner_rate("Mk1", "impure"), Ok(30.0));
+    }
+
+    #[test]
+    fn miner_rate_of_zero_is_an_error() {
+        let mut zero = extractors();
+        zero.miners.insert("Mk1".into(), 0.0);
+        assert_eq!(
+            zero.miner_rate("Mk1", "normal"),
+            Err("Miner Mk1 on normal nodes needs a rate above 0 in extractors.json".into())
+        );
     }
 
     #[test]
