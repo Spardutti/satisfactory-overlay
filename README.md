@@ -13,7 +13,7 @@ The overlay cannot draw over **exclusive fullscreen**. In Satisfactory, set **Wi
 1. Start the app. It looks for `CommunityResources\Docs\en-US.json` in the usual Steam and Epic folders.
 2. Not found? Press **Pick file** and choose that file in your game folder. The path is remembered.
 3. **My alternates**: tick the alternate recipes you have unlocked.
-4. **Plan**: pick a target, then either "I want X / min" or "I have these resources". Press **Calculate**.
+4. **Plan**: pick a target (its standard rate per machine shows below it), then either "I want X / min" or "I have these resources". Pick your miner, belt and pipe tiers. Press **Calculate**.
 5. Change the recipe of any step from its dropdown. Press **Save as plan**.
 6. **Saved plans**: pick the active plan. The overlay shows it.
 
@@ -34,6 +34,7 @@ All in `%APPDATA%\com.spardutti.satisfactory-overlay\`:
 - `config.json`: recipe file path, owned alternates, hotkeys. Edit hotkeys here, then restart.
 - `raw_resources.json`: items treated as raw (mined or gathered). Created on first start.
 - `extractors.json`: miner rates per tier and node purity factors.
+- `logistics.json`: belt and pipe speeds per tier, used to split machines across belts.
 - `plans.json`: saved plans and progress.
 
 Miners are counted only for ore nodes. Fluids and gathered items show the amount per minute only.
