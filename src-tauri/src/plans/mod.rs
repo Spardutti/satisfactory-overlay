@@ -1,8 +1,9 @@
+mod card_text;
 mod checklist;
 mod model;
 
 pub use checklist::checklist;
-pub use model::{Mode, Plan, PlanRequest, PlanStore};
+pub use model::{ChecklistStep, Mode, Plan, PlanRequest, PlanStore};
 
 /// Where built-machine counts come from; a game-API source can fill them in later.
 pub trait ProgressSource {
