@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api, type Calculation, type ExtractorOptions, type Named, type Plan, type Target } from "$lib/api";
-  import { emptyForm, fromPlan, toRequest } from "./form";
+  import { defaultName, emptyForm, fromPlan, toRequest } from "./form";
   import PlanForm from "./PlanForm.svelte";
   import ResultView from "./ResultView.svelte";
 
@@ -56,7 +56,7 @@
   async function save() {
     const request = toRequest(form, targets);
     if (typeof request === "string") return (error = request);
-    const name = planName.trim() || form.targetName;
+    const name = planName.trim() || defaultName(form);
     try {
       const plan = await api.savePlan({ id: planId, name, request });
       planId = plan.id;
@@ -78,7 +78,7 @@
     {#if error}<p class="error">{error}</p>{/if}
     {#if calc}
       <div class="save">
-        <input bind:value={planName} placeholder={form.targetName || "Plan name"} />
+        <input bind:value={planName} placeholder={defaultName(form)} />
         <button class="primary" onclick={save}>{planId ? "Update plan" : "Save as plan"}</button>
         {#if savedNote}<span class="muted">{savedNote}</span>{/if}
       </div>
