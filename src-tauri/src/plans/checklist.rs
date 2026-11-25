@@ -48,9 +48,15 @@ fn machine_label(step: &Step) -> String {
     }
 }
 
-/// "5 × Constructor · 40 /min each · last at 50%"
+/// "5 × Constructor · 40 /min each · 180 /min total · last at 50%"
 fn machine_detail(step: &Step) -> String {
-    let base = format!("{} × {} · {} /min each", step.machines, step.building_name, round(step.per_machine));
+    let base = format!(
+        "{} × {} · {} /min each · {} /min total",
+        step.machines,
+        step.building_name,
+        round(step.per_machine),
+        round(step.output_per_min)
+    );
     match step.last_machine_pct < 99.95 {
         true => format!("{base} · last at {}%", round(step.last_machine_pct)),
         false => base,

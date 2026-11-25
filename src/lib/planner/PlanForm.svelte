@@ -38,7 +38,8 @@
     <p class="hint">
       Standard: <strong>{fmt(standard.perMachine)} /min per {standard.buildingName}</strong>
       {#if form.mode === "rate" && form.rate > 0}
-        · {fmt(form.rate)} /min = {fmt(form.rate / standard.perMachine)} {standard.buildingName}s
+        {@const count = form.rate / standard.perMachine}
+        · {fmt(form.rate)} /min = {fmt(count)} {standard.buildingName}{count === 1 ? "" : "s"}
       {/if}
     </p>
   {/if}

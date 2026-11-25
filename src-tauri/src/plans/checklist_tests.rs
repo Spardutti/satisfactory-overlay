@@ -48,7 +48,7 @@ fn checklist_screw_card_on_mk1_belt_needs_one_belt_per_machine() {
     let screw = card(&cards, "Constructor — Screw");
     assert_eq!(
         (screw.detail.as_str(), screw.output.as_str(), screw.goes_to.as_str()),
-        ("3 × Constructor · 40 /min each", "3 belts · 1 each (40)", "final product")
+        ("3 × Constructor · 40 /min each · 120 /min total", "3 belts · 1 each (40)", "final product")
     );
 }
 
@@ -68,7 +68,7 @@ fn checklist_miner_card_says_where_the_ore_goes() {
 #[test]
 fn checklist_partial_machine_shows_last_clock() {
     let cards = screw_cards(100.0);
-    assert_eq!(cards.last().unwrap().detail, "3 × Constructor · 40 /min each · last at 50%");
+    assert_eq!(cards.last().unwrap().detail, "3 × Constructor · 40 /min each · 100 /min total · last at 50%");
 }
 
 #[test]
