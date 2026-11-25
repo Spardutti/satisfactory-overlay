@@ -55,12 +55,6 @@ fn plan_rate_user_pick_that_loops_is_not_silently_dropped() {
     assert_eq!(err, "Recipe loop: Fuel → Packaged → Fuel. Pick another recipe for one of them.");
 }
 
-
-
-
-
-
-
 #[test]
 fn plan_rate_negative_rate_is_an_error() {
     let err = setup(crate::game_data::fixture()).planner().plan_rate("Desc_IronScrew_C", -10.0).unwrap_err();

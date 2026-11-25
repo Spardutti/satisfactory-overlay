@@ -1,7 +1,7 @@
 use super::*;
+use crate::game_data::{fixture, ItemAmount, Recipe};
 
 pub(super) const MK1: Transport = Transport { belt: 60.0, pipe: 300.0 };
-use crate::game_data::{fixture, ItemAmount, Recipe};
 
 pub(super) struct Setup {
     data: GameData,
