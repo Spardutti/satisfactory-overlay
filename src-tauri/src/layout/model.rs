@@ -47,7 +47,7 @@ pub struct Block {
 #[serde(rename_all = "camelCase")]
 pub struct Row {
     pub inputs: Vec<BeltLine>,
-    /// clock of each machine in the row, 100 unless it is the last one
+    /// clock of each machine: what it pulls divided by its own rate
     pub machines: Vec<f64>,
     pub output: BeltLine,
     pub node: Option<String>,
