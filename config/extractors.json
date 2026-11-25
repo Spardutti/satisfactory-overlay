@@ -1,0 +1,4 @@
+{
+  "miners": { "Mk1": 60, "Mk2": 120, "Mk3": 240 },
+  "purity": { "impure": 0.5, "normal": 1.0, "pure": 2.0 }
+}
