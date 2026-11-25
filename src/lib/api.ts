@@ -76,6 +76,34 @@ export type HotkeyStatus = {
   errors: string[];
 };
 
+export type BeltLine = { item: string; itemName: string; perMin: number; fluid: boolean; over: boolean };
+export type LayoutRow = { inputs: BeltLine[]; machines: number[]; output: BeltLine };
+export type Block = {
+  item: string;
+  title: string;
+  buildingName: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rowHeight: number;
+  rows: LayoutRow[];
+  inputBuses: Bus[];
+  outputBuses: Bus[];
+};
+export type Tap = { row: number; input: number; perMin: number };
+export type Bus = { item: string; itemName: string; fluid: boolean; perMin: number; taps: Tap[] };
+export type Connection = { item: string; fromBus: number; toItem: string; toBus: number; perMin: number };
+export type Metrics = {
+  machineWidth: number;
+  machineGap: number;
+  rowHeight: number;
+  inputStep: number;
+  header: number;
+  padding: number;
+};
+export type Layout = { width: number; height: number; blocks: Block[]; connections: Connection[]; metrics: Metrics };
+
 export const PLANS_CHANGED = "plans-changed";
 export const OVERLAY_MODE = "overlay-mode";
 
@@ -88,6 +116,10 @@ export const api = {
   setAlternate: (id: string, enabled: boolean) => invoke<void>("set_alternate", { id, enabled }),
   extractorOptions: () => invoke<ExtractorOptions>("extractor_options"),
   calculate: (request: PlanRequest) => invoke<Calculation>("calculate", { request }),
+  planLayout: (planId: string) => invoke<Layout>("plan_layout", { planId }),
+  moveBlock: (planId: string, item: string, x: number, y: number) =>
+    invoke<void>("move_block", { change: { planId, item, x, y } }),
+  resetLayout: (planId: string) => invoke<void>("reset_layout", { planId }),
   listPlans: () => invoke<PlanStore>("list_plans"),
   savePlan: (draft: { id: string | null; name: string; request: PlanRequest }) =>
     invoke<Plan>("save_plan", { draft }),

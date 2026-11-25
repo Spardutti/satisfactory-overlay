@@ -16,7 +16,7 @@ fn plan(id: &str, steps: Vec<ChecklistStep>) -> Plan {
         pipe_tier: "Mk1".into(),
         choices: HashMap::new(),
     };
-    Plan { id: id.into(), name: id.into(), request, steps }
+    Plan { id: id.into(), name: id.into(), request, steps, positions: Default::default() }
 }
 
 fn built(plan: &Plan) -> Vec<u32> {

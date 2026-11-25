@@ -5,18 +5,21 @@
   import DataStatus from "$lib/planner/DataStatus.svelte";
   import PlansList from "$lib/planner/PlansList.svelte";
   import PlanTab from "$lib/planner/PlanTab.svelte";
+  import BlueprintTab from "$lib/layout/BlueprintTab.svelte";
 
-  type Tab = "plan" | "alternates" | "plans";
+  type Tab = "plan" | "alternates" | "plans" | "blueprint";
   const tabs: [Tab, string][] = [
     ["plan", "Plan"],
     ["alternates", "My alternates"],
     ["plans", "Saved plans"],
+    ["blueprint", "Blueprint"],
   ];
 
   let loaded = $state(false);
   let tab = $state<Tab>("plan");
   let editing = $state<Plan | null>(null);
   let hotkeys = $state<HotkeyStatus | null>(null);
+  let blueprintPlan = $state<string | null>(null);
 
   onMount(async () => {
     hotkeys = await api.hotkeyStatus();
@@ -25,6 +28,11 @@
   function edit(plan: Plan) {
     editing = plan;
     tab = "plan";
+  }
+
+  function openBlueprint(plan: Plan) {
+    blueprintPlan = plan.id;
+    tab = "blueprint";
   }
 
   function newPlan() {
@@ -49,8 +57,10 @@
         {/key}
       {:else if tab === "alternates"}
         <Alternates />
+      {:else if tab === "blueprint"}
+        <BlueprintTab bind:planId={blueprintPlan} />
       {:else}
-        <PlansList onEdit={edit} />
+        <PlansList onEdit={edit} onBlueprint={openBlueprint} />
       {/if}
     </main>
   {/if}
@@ -89,6 +99,7 @@
   }
   main {
     flex: 1;
+    min-height: 0;
     overflow: auto;
   }
   footer {

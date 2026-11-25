@@ -43,6 +43,7 @@ pub fn save_plan(app: AppHandle, state: State<AppState>, draft: PlanDraft) -> Re
             name: name.clone(),
             request: request.clone(),
             steps: vec![],
+            positions: Default::default(),
         });
         plan.name = name;
         plan.request = request;
@@ -81,7 +82,7 @@ pub fn mark_next_step(app: AppHandle) -> Result<(), String> {
     })
 }
 
-fn change_plans(app: &AppHandle, change: impl FnOnce(&mut PlanStore)) -> Result<(), String> {
+pub fn change_plans(app: &AppHandle, change: impl FnOnce(&mut PlanStore)) -> Result<(), String> {
     let state = app.state::<AppState>();
     let mut store = lock(&state.plans);
     change(&mut store);
