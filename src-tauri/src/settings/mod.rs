@@ -11,26 +11,11 @@ const DEFAULT_RAW: &str = include_str!("../../../config/raw_resources.json");
 const DEFAULT_EXTRACTORS: &str = include_str!("../../../config/extractors.json");
 const DEFAULT_LOGISTICS: &str = include_str!("../../../config/logistics.json");
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Hotkeys {
-    pub toggle_mode: String,
-    pub toggle_visible: String,
-    pub mark_next: String,
-}
-
-impl Default for Hotkeys {
-    fn default() -> Self {
-        Self { toggle_mode: "F8".into(), toggle_visible: "F9".into(), mark_next: "Ctrl+F8".into() }
-    }
-}
-
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct AppConfig {
     pub docs_path: Option<PathBuf>,
     pub enabled_alternates: BTreeSet<String>,
-    pub hotkeys: Hotkeys,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -174,8 +159,8 @@ mod tests {
     }
 
     #[test]
-    fn read_or_backup_missing_config_returns_default_hotkeys() {
+    fn read_or_backup_missing_config_returns_defaults() {
         let config: AppConfig = read_or_backup(Path::new("/nonexistent/config.json"), &mut vec![]);
-        assert_eq!(config.hotkeys.mark_next, "Ctrl+F8");
+        assert_eq!((config.docs_path, config.enabled_alternates.len()), (None, 0));
     }
 }

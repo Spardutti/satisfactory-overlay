@@ -1,26 +1,19 @@
 mod commands;
 pub mod game_data;
 mod layout;
-mod overlay;
 pub mod planner;
 mod plans;
 mod settings;
 mod state;
 
 use commands::{data, layout as layout_cmds, planning, plans as plan_cmds};
-use state::{lock, AppState};
-use tauri::{App, Manager, WebviewWindowBuilder, Window, WindowEvent};
+use state::AppState;
+use tauri::{App, Manager, WebviewWindowBuilder};
 use tauri_plugin_window_state::StateFlags;
-
-const PLANNER: &str = "planner";
 
 fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     let paths = app.path();
-    let state = AppState::load(&paths.app_config_dir()?, &paths.app_data_dir()?);
-    let hotkeys = lock(&state.config).hotkeys.clone();
-    app.manage(state);
-    let errors = overlay::register_hotkeys(app.handle(), &hotkeys);
-    lock(&app.state::<AppState>().notices).extend(errors);
+    app.manage(AppState::load(&paths.app_config_dir()?, &paths.app_data_dir()?));
     open_windows(app)
 }
 
@@ -32,17 +25,9 @@ fn open_windows(app: &App) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// The overlay has no close button, so closing the planner quits the whole app.
-fn quit_when_planner_closes(window: &Window, event: &WindowEvent) {
-    if window.label() == PLANNER && matches!(event, WindowEvent::CloseRequested { .. }) {
-        window.app_handle().exit(0);
-    }
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
@@ -50,7 +35,6 @@ pub fn run() {
                 .build(),
         )
         .setup(setup)
-        .on_window_event(quit_when_planner_closes)
         .invoke_handler(tauri::generate_handler![
             data::load_game_data,
             data::set_docs_path,
@@ -67,11 +51,7 @@ pub fn run() {
             plan_cmds::list_plans,
             plan_cmds::save_plan,
             plan_cmds::delete_plan,
-            plan_cmds::set_active_plan,
-            plan_cmds::adjust_step,
-            plan_cmds::mark_next_step,
-            overlay::overlay_interactive,
-            overlay::hotkey_status,
+            plan_cmds::toggle_built,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

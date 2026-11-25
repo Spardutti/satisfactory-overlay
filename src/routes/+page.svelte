@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { api, type HotkeyStatus, type Plan } from "$lib/api";
+  import type { Plan } from "$lib/api";
   import Alternates from "$lib/planner/Alternates.svelte";
   import DataStatus from "$lib/planner/DataStatus.svelte";
   import PlansList from "$lib/planner/PlansList.svelte";
@@ -18,12 +17,7 @@
   let loaded = $state(false);
   let tab = $state<Tab>("plan");
   let editing = $state<Plan | null>(null);
-  let hotkeys = $state<HotkeyStatus | null>(null);
   let blueprintPlan = $state<string | null>(null);
-
-  onMount(async () => {
-    hotkeys = await api.hotkeyStatus();
-  });
 
   function edit(plan: Plan) {
     editing = plan;
@@ -64,13 +58,6 @@
       {/if}
     </main>
   {/if}
-  {#if hotkeys}
-    <footer class="muted">
-      Overlay: {hotkeys.keys.toggleMode} click-through on/off · {hotkeys.keys.toggleVisible} show/hide ·
-      {hotkeys.keys.markNext} mark next machine
-      {#each hotkeys.errors as e (e)}<span class="error"> · {e}</span>{/each}
-    </footer>
-  {/if}
 </div>
 
 <style>
@@ -101,10 +88,5 @@
     flex: 1;
     min-height: 0;
     overflow: auto;
-  }
-  footer {
-    padding: 6px 12px;
-    border-top: 1px solid var(--line);
-    font-size: 12px;
   }
 </style>

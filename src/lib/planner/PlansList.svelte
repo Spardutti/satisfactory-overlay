@@ -5,7 +5,7 @@
 
   let { onEdit, onBlueprint }: { onEdit: (plan: Plan) => void; onBlueprint: (plan: Plan) => void } = $props();
 
-  let store = $state<PlanStore>({ active: null, plans: [] });
+  let store = $state<PlanStore>({ plans: [] });
 
   async function refresh() {
     store = await api.listPlans();
@@ -28,18 +28,14 @@
   {/if}
   {#each store.plans as plan (plan.id)}
     {@const p = progress(plan)}
-    <div class="plan" class:active={plan.id === store.active}>
-      <label>
-        <input type="radio" checked={plan.id === store.active} onchange={() => api.setActivePlan(plan.id)} />
-        {plan.name}
-      </label>
-      <span class="muted">{p.built} / {p.total} machines</span>
+    <div class="plan">
+      <span>{plan.name}</span>
+      <span class="muted">{p.built} / {p.total} machines built</span>
       <button onclick={() => onBlueprint(plan)}>Blueprint</button>
       <button onclick={() => onEdit(plan)}>Edit</button>
       <button onclick={() => remove(plan)}>Delete</button>
     </div>
   {/each}
-  <p class="muted">The active plan is the one the overlay shows.</p>
 </div>
 
 <style>
@@ -53,10 +49,7 @@
     padding: 6px 8px;
     border-bottom: 1px solid var(--line);
   }
-  .plan label {
+  .plan > span:first-child {
     flex: 1;
-  }
-  .active {
-    border-left: 3px solid var(--orange);
   }
 </style>

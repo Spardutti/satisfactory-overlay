@@ -7,7 +7,7 @@
 
   let { planId = $bindable() }: { planId: string | null } = $props();
 
-  let store = $state<PlanStore>({ active: null, plans: [] });
+  let store = $state<PlanStore>({ plans: [] });
   let layout = $state<Layout | null>(null);
   let error = $state("");
   let showNodes = $state(false);
@@ -22,7 +22,7 @@
 
   async function refresh() {
     store = await api.listPlans();
-    if (!store.plans.some((p) => p.id === planId)) planId = store.active ?? store.plans[0]?.id ?? null;
+    if (!store.plans.some((p) => p.id === planId)) planId = store.plans[0]?.id ?? null;
   }
 
   /** Reloads the blueprint only when its plan is gone; a drag here also fires this event. */
@@ -48,6 +48,10 @@
     } catch (e) {
       error = String(e);
     }
+  }
+
+  function toggleBuilt(item: string, row: number) {
+    if (planId) api.toggleBuilt({ planId, item, row }).catch((e) => (error = String(e)));
   }
 
   function saveMove(item: string, x: number, y: number) {
@@ -83,7 +87,7 @@
     </select>
     <button onclick={resetLayout} disabled={!planId}>Reset layout</button>
     <button onclick={() => (showNodes = !showNodes)} disabled={!calc} class:primary={showNodes}>Nodes</button>
-    <span class="muted">Scroll to zoom · drag the background to move · drag a block to place it</span>
+    <span class="muted">Scroll to zoom · drag to move · click a machine to tick it built</span>
     {#if error}<span class="error">{error}</span>{/if}
   </div>
   {#if showNodes && calc && plan}
@@ -91,7 +95,7 @@
   {/if}
   {#if layout}
     {#key planId}
-      <Blueprint bind:layout onMoved={saveMove} />
+      <Blueprint bind:layout built={plan?.built ?? {}} onMoved={saveMove} onToggle={toggleBuilt} />
     {/key}
   {:else if !store.plans.length}
     <p class="muted pad">Save a plan first, then open its blueprint here.</p>

@@ -18,20 +18,6 @@
         "width": 1000,
         "height": 760,
         "create": false
-      },
-      {
-        "label": "overlay",
-        "title": "Satisfactory Overlay",
-        "url": "/overlay",
-        "width": 340,
-        "height": 480,
-        "transparent": true,
-        "decorations": false,
-        "alwaysOnTop": true,
-        "skipTaskbar": true,
-        "resizable": true,
-        "shadow": false,
-        "create": false
       }
     ],
     "security": {

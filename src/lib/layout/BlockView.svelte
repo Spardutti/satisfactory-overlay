@@ -4,7 +4,7 @@
   import { itemColor } from "./colors";
   import { inputLane, outputLane, rowGeometry } from "./geometry";
 
-  let { block, metrics: m }: { block: Block; metrics: Metrics } = $props();
+  let { block, metrics: m, built }: { block: Block; metrics: Metrics; built: number[] } = $props();
 
   const tag = $derived(block.buildingName.slice(0, 4).toUpperCase());
 
@@ -49,7 +49,10 @@
   {#each block.rows as row, r (r)}
     {@const g = rowGeometry(block, m, r)}
     {#each row.machines as clock, i (i)}
-      <rect class="machine" x={g.machineLeft} y={g.machineTop} width={m.machineWidth} height={g.machineHeight} rx="3" />
+      <rect class="machine" class:built={built.includes(r)} data-row={r} x={g.machineLeft} y={g.machineTop} width={m.machineWidth} height={g.machineHeight} rx="3" />
+      {#if built.includes(r)}
+        <text class="tick" x={g.machineLeft + m.machineWidth - 8} y={g.machineTop + 13}>✓</text>
+      {/if}
       <text class="tag" x={g.machineLeft + m.machineWidth / 2} y={g.machineTop + g.machineHeight / 2}>{tag}</text>
       {#if row.node}
         <text class="clock" x={g.machineLeft + m.machineWidth / 2} y={g.machineTop + 11}>{row.node.toUpperCase()}</text>
@@ -99,10 +102,22 @@
     fill: var(--panel-2);
     stroke: var(--orange-dim);
     stroke-width: 2;
+    cursor: pointer;
+  }
+  .machine.built {
+    stroke: var(--ok);
+  }
+  .tick {
+    fill: var(--ok);
+    font-size: 13px;
+    font-weight: 700;
+    text-anchor: middle;
+    pointer-events: none;
   }
   .tag,
   .clock {
     text-anchor: middle;
+    pointer-events: none;
   }
   .tag {
     fill: var(--text);

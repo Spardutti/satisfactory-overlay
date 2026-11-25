@@ -1,6 +1,6 @@
 use crate::planner::NodeCounts;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
@@ -68,40 +68,47 @@ pub struct Plan {
     /// blueprint blocks the user moved by hand: item → [x, y]
     #[serde(default)]
     pub positions: BTreeMap<String, [f64; 2]>,
+    /// machines ticked as built in the blueprint: item → machine rows
+    #[serde(default)]
+    pub built: BTreeMap<String, BTreeSet<u32>>,
 }
 
 impl Plan {
-    /// Builds one more machine of the first unfinished step; false when all are built.
-    pub fn mark_next(&mut self) -> bool {
-        match self.steps.iter_mut().find(|s| s.built < s.total) {
-            Some(step) => {
-                step.built += 1;
-                true
-            }
-            None => false,
+    /// Ticks or unticks one machine; a row its step does not have is ignored.
+    pub fn toggle_built(&mut self, item: &str, row: u32) {
+        let Some(step) = self.steps.iter().find(|s| s.item == item) else { return };
+        if row >= step.total {
+            return;
         }
+        let rows = self.built.entry(item.to_string()).or_default();
+        if !rows.remove(&row) {
+            rows.insert(row);
+        }
+        self.count_built();
     }
 
-    pub fn adjust(&mut self, step: usize, delta: i32) {
-        if let Some(s) = self.steps.get_mut(step) {
-            s.built = s.built.saturating_add_signed(delta).min(s.total);
-        }
-    }
-
-    /// Replaces the steps, keeping what was built on steps with the same label.
-    pub fn replace_steps(&mut self, mut steps: Vec<ChecklistStep>) {
-        for step in &mut steps {
-            let old = self.steps.iter().find(|o| o.label == step.label);
-            step.built = old.map_or(0, |o| o.built.min(step.total));
-        }
+    /// Replaces the steps; ticks on machines that no longer exist go away.
+    pub fn replace_steps(&mut self, steps: Vec<ChecklistStep>) {
         self.steps = steps;
+        let totals: HashMap<&str, u32> = self.steps.iter().map(|s| (s.item.as_str(), s.total)).collect();
+        self.built.retain(|item, rows| {
+            let total = totals.get(item.as_str()).copied().unwrap_or(0);
+            rows.retain(|row| *row < total);
+            !rows.is_empty()
+        });
+        self.count_built();
+    }
+
+    fn count_built(&mut self) {
+        for step in &mut self.steps {
+            step.built = self.built.get(&step.item).map_or(0, |rows| rows.len() as u32);
+        }
     }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlanStore {
-    pub active: Option<String>,
     pub plans: Vec<Plan>,
 }
 
@@ -110,13 +117,7 @@ impl PlanStore {
         self.plans.iter_mut().find(|p| p.id == id)
     }
 
-    pub fn active_mut(&mut self) -> Option<&mut Plan> {
-        let id = self.active.clone()?;
-        self.get_mut(&id)
-    }
-
     pub fn upsert(&mut self, plan: Plan) {
-        self.active.get_or_insert_with(|| plan.id.clone());
         match self.plans.iter_mut().find(|p| p.id == plan.id) {
             Some(existing) => *existing = plan,
             None => self.plans.push(plan),
@@ -125,14 +126,5 @@ impl PlanStore {
 
     pub fn remove(&mut self, id: &str) {
         self.plans.retain(|p| p.id != id);
-        if self.active.as_deref() == Some(id) {
-            self.active = self.plans.first().map(|p| p.id.clone());
-        }
-    }
-
-    pub fn set_active(&mut self, id: &str) {
-        if self.plans.iter().any(|p| p.id == id) {
-            self.active = Some(id.to_string());
-        }
     }
 }

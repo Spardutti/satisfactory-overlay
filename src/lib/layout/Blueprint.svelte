@@ -9,12 +9,19 @@
 
   let {
     layout = $bindable(),
+    built,
     onMoved,
-  }: { layout: Layout; onMoved: (item: string, x: number, y: number) => void } = $props();
+    onToggle,
+  }: {
+    layout: Layout;
+    built: Record<string, number[]>;
+    onMoved: (item: string, x: number, y: number) => void;
+    onToggle: (item: string, row: number) => void;
+  } = $props();
 
   let screen = $state<HTMLDivElement>();
   let view = $state<View>({ scale: 1, x: 0, y: 0 });
-  let drag: { x: number; y: number; block: Block | null; moved: boolean } | null = null;
+  let drag: { x: number; y: number; block: Block | null; row: number | null; moved: boolean } | null = null;
 
   function fit() {
     if (!screen) return;
@@ -36,7 +43,8 @@
     if (target.closest("button")) return;
     const item = target.closest("[data-block]")?.getAttribute("data-block");
     const block = layout.blocks.find((b) => b.item === item) ?? null;
-    drag = { x: e.clientX, y: e.clientY, block, moved: false };
+    const row = target.closest("[data-row]")?.getAttribute("data-row");
+    drag = { x: e.clientX, y: e.clientY, block, row: row == null ? null : Number(row), moved: false };
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
   }
 
@@ -53,9 +61,12 @@
   }
 
   /** Also runs when the pointer is lost mid-drag, e.g. on alt-tab, so a drag never sticks. */
-  function onUp() {
-    if (drag?.block && drag.moved) onMoved(drag.block.item, Math.round(drag.block.x), Math.round(drag.block.y));
+  function onUp(e: PointerEvent) {
+    const done = drag;
     drag = null;
+    if (!done?.block) return;
+    if (done.moved) onMoved(done.block.item, Math.round(done.block.x), Math.round(done.block.y));
+    else if (done.row !== null && e.type === "pointerup") onToggle(done.block.item, done.row);
   }
 
   const routes = $derived(buildRoutes(layout));
@@ -74,7 +85,7 @@
         <text class="link-label" x={branch.label.x} y={branch.label.y} style:fill={itemColor(branch.item)}>{fmt(branch.perMin)}</text>
       {/each}
       {#each layout.blocks as block (block.item)}
-        <BlockView {block} metrics={layout.metrics} />
+        <BlockView {block} metrics={layout.metrics} built={built[block.item] ?? []} />
       {/each}
     </g>
   </svg>
