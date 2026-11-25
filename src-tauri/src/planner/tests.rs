@@ -8,7 +8,7 @@ pub(super) struct Setup {
     raw: HashSet<String>,
     pub(super) choices: HashMap<String, String>,
     pub(super) alternates: HashSet<String>,
-    miner_rate: f64,
+    pub(super) miner_rate: f64,
     pub(super) transport: Transport,
 }
 

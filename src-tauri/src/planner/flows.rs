@@ -28,11 +28,16 @@ impl Planner<'_> {
         }
     }
 
+    /// What one miner really delivers: its rate, capped by the belt it fills.
+    pub(super) fn miner_output(&self) -> f64 {
+        self.miner_rate.min(self.transport.belt)
+    }
+
     /// Miners grouped per output belt; fluids and gathered items just fill lines.
     pub(super) fn raw_belts(&self, item: &str, per_min: f64) -> Vec<BeltGroup> {
         let capacity = self.transport.capacity(self.data.is_fluid(item));
         match self.data.is_minable(item) {
-            true => belt_groups(self.miner_rate, per_min / self.miner_rate, capacity),
+            true => belt_groups(self.miner_output(), per_min / self.miner_output(), capacity),
             false => line_groups(per_min, capacity),
         }
     }
@@ -43,7 +48,7 @@ pub(super) fn link_destinations(steps: &mut [Step], raw: &mut [RawNeed]) {
     let mut usage: HashMap<String, Vec<Usage>> = HashMap::new();
     for step in steps.iter() {
         for input in &step.inputs {
-            let used = Usage { item_name: step.item_name.clone(), per_min: input.per_min };
+            let used = Usage { item: step.item.clone(), item_name: step.item_name.clone(), per_min: input.per_min };
             usage.entry(input.item.clone()).or_default().push(used);
         }
     }

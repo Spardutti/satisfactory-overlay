@@ -84,8 +84,8 @@ mod tests {
     #[test]
     fn goes_to_text_lists_each_user() {
         let usages = [
-            Usage { item_name: "Iron Plate".into(), per_min: 135.0 },
-            Usage { item_name: "Iron Rod".into(), per_min: 45.0 },
+            Usage { item: "P".into(), item_name: "Iron Plate".into(), per_min: 135.0 },
+            Usage { item: "R".into(), item_name: "Iron Rod".into(), per_min: 45.0 },
         ];
         assert_eq!(goes_to_text(&usages), "135 to Iron Plate · 45 to Iron Rod");
     }
