@@ -1,8 +1,8 @@
 use super::*;
 use crate::planner::RawNeed;
 
-const MK1: NodeRates = NodeRates { pure: 120.0, normal: 60.0, impure: 30.0 };
-const MK2_ON_MK5: NodeRates = NodeRates { pure: 240.0, normal: 120.0, impure: 60.0 };
+const MK1: NodeRates = NodeRates { pure: 120.0, normal: 60.0, impure: 30.0, belt: 780.0 };
+const MK2_ON_MK5: NodeRates = NodeRates { pure: 240.0, normal: 120.0, impure: 60.0, belt: 780.0 };
 
 fn nodes(pure: u32, normal: u32, impure: u32) -> NodeCounts {
     NodeCounts { pure, normal, impure }
@@ -83,4 +83,32 @@ fn node_limit_all_ores_covered_is_none() {
     let mut result = computers(vec![ore("iron", 240.0)]);
     apply_nodes(&mut result, &BTreeMap::from([("iron".to_string(), nodes(2, 0, 0))]), MK1);
     assert_eq!(node_limit(&result), None);
+}
+
+const MK2_ON_MK1: NodeRates = NodeRates { pure: 240.0, normal: 120.0, impure: 60.0, belt: 60.0 };
+
+#[test]
+fn draw_from_nodes_mk2_pure_on_mk1_belt_clocks_30_against_the_full_240() {
+    let supply = draw_from_nodes(30.0, nodes(1, 0, 0), MK2_ON_MK1);
+    assert_eq!((supply.draws[0].per_min, supply.draws[0].clock), (30.0, 12.5));
+}
+
+#[test]
+fn draw_from_nodes_mk2_pure_on_mk1_belt_pulls_only_60() {
+    let supply = draw_from_nodes(240.0, nodes(1, 0, 0), MK2_ON_MK1);
+    assert_eq!((pulls(&supply), supply.short), (vec![("pure", 60.0)], 180.0));
+}
+
+#[test]
+fn apply_nodes_flags_capped_when_a_used_node_beats_the_belt() {
+    let mut result = computers(vec![ore("iron", 60.0)]);
+    apply_nodes(&mut result, &BTreeMap::from([("iron".to_string(), nodes(1, 0, 0))]), MK2_ON_MK1);
+    assert!(result.raw[0].capped);
+}
+
+#[test]
+fn apply_nodes_clears_capped_when_no_used_node_beats_the_belt() {
+    let mut result = computers(vec![RawNeed { capped: true, ..ore("iron", 60.0) }]);
+    apply_nodes(&mut result, &BTreeMap::from([("iron".to_string(), nodes(0, 0, 1))]), MK2_ON_MK1);
+    assert!(!result.raw[0].capped);
 }

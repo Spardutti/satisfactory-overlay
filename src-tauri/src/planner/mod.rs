@@ -23,7 +23,7 @@ pub struct Planner<'a> {
     /// item id → recipe id the user picked for it
     pub choices: &'a HashMap<String, String>,
     pub enabled_alternates: &'a HashSet<String>,
-    /// items per minute one miner extracts, for the chosen tier and purity
+    /// items per minute one miner extracts on a normal node, for the chosen tier
     pub miner_rate: f64,
     pub transport: Transport,
 }

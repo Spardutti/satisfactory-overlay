@@ -49,10 +49,10 @@ impl Extractors {
         }
     }
 
-    /// What one miner of `tier` gives on each purity, held back to what one `belt` carries.
+    /// What one miner of `tier` makes on each purity, with the `belt` that carries it.
     pub fn node_rates(&self, tier: &str, belt: f64) -> Result<NodeRates, String> {
-        let rate = |purity: &str| self.miner_rate(tier, purity).map(|r| r.min(belt));
-        Ok(NodeRates { pure: rate("pure")?, normal: rate("normal")?, impure: rate("impure")? })
+        let rate = |purity: &str| self.miner_rate(tier, purity);
+        Ok(NodeRates { pure: rate("pure")?, normal: rate("normal")?, impure: rate("impure")?, belt })
     }
 }
 
@@ -113,15 +113,9 @@ mod tests {
     }
 
     #[test]
-    fn node_rates_mk2_on_mk1_belt_caps_pure_and_normal_at_60() {
+    fn node_rates_mk2_on_mk1_belt_keeps_full_miner_rates() {
         let rates = extractors().node_rates("Mk2", 60.0).unwrap();
-        assert_eq!((rates.pure, rates.normal, rates.impure), (60.0, 60.0, 60.0));
-    }
-
-    #[test]
-    fn node_rates_mk1_on_mk5_belt_keeps_full_rates() {
-        let rates = extractors().node_rates("Mk1", 780.0).unwrap();
-        assert_eq!((rates.pure, rates.normal, rates.impure), (120.0, 60.0, 30.0));
+        assert_eq!(rates, NodeRates { pure: 240.0, normal: 120.0, impure: 60.0, belt: 60.0 });
     }
 
     #[test]

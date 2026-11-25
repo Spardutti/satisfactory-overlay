@@ -176,7 +176,7 @@ fn source_rows_two_30_miners_sharing_a_60_belt_are_two_rows_at_100() {
 #[test]
 fn source_rows_listed_nodes_give_one_row_per_node_with_its_purity() {
     let mut ore = ore_need(vec![]);
-    let rates = crate::planner::NodeRates { pure: 120.0, normal: 60.0, impure: 30.0 };
+    let rates = crate::planner::NodeRates { pure: 120.0, normal: 60.0, impure: 30.0, belt: 780.0 };
     ore.nodes = Some(crate::planner::draw_from_nodes(150.0, crate::planner::NodeCounts { pure: 1, normal: 0, impure: 2 }, rates));
     let rows: Vec<(Option<String>, f64)> = source_rows(&ore, 60.0).into_iter().map(|r| (r.node, r.output.per_min)).collect();
     assert_eq!(rows, vec![(Some("pure".into()), 120.0), (Some("impure".into()), 30.0)]);
