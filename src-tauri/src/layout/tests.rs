@@ -150,3 +150,24 @@ fn build_layout_canvas_holds_every_block() {
     let fits = layout.blocks.iter().all(|b| b.x + b.width <= layout.width && b.y + b.height <= layout.height);
     assert!(fits);
 }
+
+fn ore_need(belts: Vec<crate::planner::BeltGroup>) -> RawNeed {
+    let per_min = belts.iter().map(|b| b.per_min).sum();
+    RawNeed {
+        item: "Desc_OreIron_C".into(),
+        item_name: "Iron Ore".into(),
+        per_min,
+        fluid: false,
+        miners: Some(belts.iter().map(|b| b.machines).sum()),
+        capped: false,
+        belts,
+        goes_to: vec![],
+    }
+}
+
+#[test]
+fn source_rows_two_30_miners_sharing_a_60_belt_are_two_rows_at_100() {
+    let group = crate::planner::BeltGroup { machines: 2, per_min: 60.0, over: false };
+    let rows = source_rows(&ore_need(vec![group]), 30.0);
+    assert_eq!(rows.iter().map(|r| r.machines.clone()).collect::<Vec<_>>(), vec![vec![100.0], vec![100.0]]);
+}
