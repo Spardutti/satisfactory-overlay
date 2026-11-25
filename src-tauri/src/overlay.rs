@@ -73,6 +73,6 @@ pub struct HotkeyStatus {
 pub fn hotkey_status(state: State<AppState>) -> HotkeyStatus {
     HotkeyStatus {
         keys: crate::state::lock(&state.config).hotkeys.clone(),
-        errors: crate::state::lock(&state.hotkey_errors).clone(),
+        errors: crate::state::lock(&state.notices).clone(),
     }
 }

@@ -8,19 +8,26 @@ mod state;
 
 use commands::{data, planning, plans as plan_cmds};
 use state::{lock, AppState};
-use tauri::{App, Manager, WindowEvent};
+use tauri::{App, Manager, Window, WindowEvent};
 use tauri_plugin_window_state::StateFlags;
 
 const PLANNER: &str = "planner";
 
 fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     let paths = app.path();
-    let state = AppState::load(&paths.app_config_dir()?, &paths.app_data_dir()?)?;
+    let state = AppState::load(&paths.app_config_dir()?, &paths.app_data_dir()?);
     let hotkeys = lock(&state.config).hotkeys.clone();
     app.manage(state);
     let errors = overlay::register_hotkeys(app.handle(), &hotkeys);
-    *lock(&app.state::<AppState>().hotkey_errors) = errors;
+    lock(&app.state::<AppState>().notices).extend(errors);
     Ok(())
+}
+
+/// The overlay has no close button, so closing the planner quits the whole app.
+fn quit_when_planner_closes(window: &Window, event: &WindowEvent) {
+    if window.label() == PLANNER && matches!(event, WindowEvent::CloseRequested { .. }) {
+        window.app_handle().exit(0);
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -34,11 +41,7 @@ pub fn run() {
                 .build(),
         )
         .setup(setup)
-        .on_window_event(|window, event| {
-            if window.label() == PLANNER && matches!(event, WindowEvent::CloseRequested { .. }) {
-                window.app_handle().exit(0);
-            }
-        })
+        .on_window_event(quit_when_planner_closes)
         .invoke_handler(tauri::generate_handler![
             data::load_game_data,
             data::set_docs_path,

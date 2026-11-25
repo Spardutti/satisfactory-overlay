@@ -1,6 +1,6 @@
 mod json_file;
 
-pub use json_file::{read_json, write_json};
+pub use json_file::{read_or_backup, write_json};
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
@@ -51,14 +51,12 @@ pub struct Editable {
     pub extractors: Extractors,
 }
 
-pub fn load_editable(config_dir: &Path) -> Result<Editable, String> {
-    let raw: Vec<String> = json_file::read_or_create(&config_dir.join("raw_resources.json"), DEFAULT_RAW)?;
-    let extractors = json_file::read_or_create(&config_dir.join("extractors.json"), DEFAULT_EXTRACTORS)?;
-    Ok(Editable { raw: raw.into_iter().collect(), extractors })
-}
-
-pub fn load_config(path: &Path) -> AppConfig {
-    read_json(path).unwrap_or_default()
+pub fn load_editable(config_dir: &Path, notices: &mut Vec<String>) -> Editable {
+    let raw: Vec<String> =
+        json_file::read_user_file(&config_dir.join("raw_resources.json"), DEFAULT_RAW, notices);
+    let extractors =
+        json_file::read_user_file(&config_dir.join("extractors.json"), DEFAULT_EXTRACTORS, notices);
+    Editable { raw: raw.into_iter().collect(), extractors }
 }
 
 #[cfg(test)]
@@ -88,15 +86,15 @@ mod tests {
     fn load_editable_first_run_writes_default_files() {
         let dir = std::env::temp_dir().join(format!("sf-settings-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
-        let editable = load_editable(&dir).unwrap();
+        let editable = load_editable(&dir, &mut vec![]);
         assert!(editable.raw.contains("Desc_OreIron_C"));
         assert!(dir.join("raw_resources.json").is_file());
         assert!(dir.join("extractors.json").is_file());
     }
 
     #[test]
-    fn load_config_missing_file_returns_default_hotkeys() {
-        let config = load_config(Path::new("/nonexistent/config.json"));
+    fn read_or_backup_missing_config_returns_default_hotkeys() {
+        let config: AppConfig = read_or_backup(Path::new("/nonexistent/config.json"), &mut vec![]);
         assert_eq!(config.hotkeys.mark_next, "Ctrl+F8");
     }
 }
