@@ -14,6 +14,11 @@
       "id": "user-numbers-are-checked",
       "files": "^src-tauri/src/settings/.*\\.rs$",
       "message": "Numbers here come from files the user edits: refuse 0, negative and missing values with a plain error, like positive_speed and miner_rate do."
+    },
+    {
+      "id": "miner-clock-against-own-rate",
+      "files": "^src-tauri/src/(planner|layout|plans|commands)/.*\\.rs$",
+      "message": "A miner's clock is what it pulls divided by its own rate, never by a rate already cut to the belt (that showed 50% where 12.5% was right)."
     }
   ]
 }
