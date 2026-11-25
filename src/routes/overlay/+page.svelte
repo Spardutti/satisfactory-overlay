@@ -3,6 +3,7 @@
   import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
   import { onMount } from "svelte";
   import { api, OVERLAY_MODE, PLANS_CHANGED, progress, type PlanStore } from "$lib/api";
+  import StepCard from "$lib/StepCard.svelte";
 
   let store = $state<PlanStore>({ active: null, plans: [] });
   let interactive = $state(true);
@@ -10,6 +11,7 @@
   const plan = $derived(store.plans.find((p) => p.id === store.active) ?? null);
   const done = $derived(plan ? progress(plan) : { built: 0, total: 0 });
   const pct = $derived(done.total ? (done.built / done.total) * 100 : 0);
+  const currentIndex = $derived(plan ? plan.steps.findIndex((s) => s.built < s.total) : -1);
 
   async function refresh() {
     store = await api.listPlans();
@@ -25,29 +27,40 @@
     ];
     return () => stops.forEach((s) => s.then((stop) => stop()));
   });
+
+  /** Clicking box n sets the count to n, or to n - 1 when box n was the last ticked one. */
+  function tick(planId: string, step: number, box: number, built: number) {
+    const target = built === box + 1 ? box : box + 1;
+    api.adjustStep(planId, step, target - built);
+  }
 </script>
 
 <div class="hud" class:interactive>
   <header data-tauri-drag-region>
     <span data-tauri-drag-region>{plan?.name ?? "No active plan"}</span>
-    <span class="tag" data-tauri-drag-region>{interactive ? "INTERACTIVE" : "PASSIVE"}</span>
+    <span class="tag" data-tauri-drag-region>
+      {plan ? `Belt ${plan.request.beltTier} · ` : ""}{interactive ? "INTERACTIVE" : "PASSIVE"}
+    </span>
   </header>
   {#if plan}
     <div class="bar"><div class="fill" style:width="{pct}%"></div></div>
-    <div class="muted total">{done.built} / {done.total} machines</div>
-    <ol>
-      {#each plan.steps as step, i (step.label)}
-        <li class:complete={step.built >= step.total}>
-          <div class="text">
-            <div>{step.label}</div>
-            <div class="muted small">{step.detail}</div>
-          </div>
-          <button onclick={() => api.adjustStep(plan.id, i, -1)}>−</button>
-          <span class="count">{step.built}/{step.total}</span>
-          <button onclick={() => api.adjustStep(plan.id, i, 1)}>+</button>
-        </li>
-      {/each}
-    </ol>
+    <div class="muted total">{done.built} / {done.total} built</div>
+    {#each plan.steps as step, i (i)}
+      <StepCard card={step} number={i + 1} current={i === currentIndex}>
+        {#snippet controls()}
+          <span class="boxes">
+            {#each { length: step.total }, box (box)}
+              <button
+                class="box"
+                class:on={box < step.built}
+                aria-label="Machine {box + 1}"
+                onclick={() => tick(plan.id, i, box, step.built)}
+              ></button>
+            {/each}
+          </span>
+        {/snippet}
+      </StepCard>
+    {/each}
   {:else}
     <p class="muted">Save a plan in the planner window to see it here.</p>
   {/if}
@@ -66,10 +79,10 @@
     background: rgba(29, 31, 34, 0.72);
     border: 2px solid transparent;
     border-radius: 6px;
-    opacity: 0.8;
+    opacity: 0.85;
   }
   .hud.interactive {
-    background: rgba(29, 31, 34, 0.88);
+    background: rgba(29, 31, 34, 0.9);
     border-color: var(--orange);
     opacity: 1;
   }
@@ -94,34 +107,24 @@
     height: 100%;
     background: var(--orange);
   }
-  .total,
-  .small {
+  .total {
     font-size: 11px;
   }
-  ol {
-    list-style: none;
-    margin: 6px 0 0;
-    padding: 0;
-  }
-  li {
+  .boxes {
     display: flex;
-    gap: 6px;
-    align-items: center;
-    padding: 4px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-wrap: wrap;
+    gap: 3px;
   }
-  li.complete {
-    opacity: 0.45;
+  .box {
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    border: 1px solid var(--muted);
+    border-radius: 2px;
+    background: transparent;
   }
-  .text {
-    flex: 1;
-    min-width: 0;
-  }
-  .count {
-    min-width: 34px;
-    text-align: center;
-  }
-  li button {
-    padding: 0 8px;
+  .box.on {
+    background: var(--orange);
+    border-color: var(--orange);
   }
 </style>

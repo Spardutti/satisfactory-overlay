@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 const DEFAULT_RAW: &str = include_str!("../../../config/raw_resources.json");
 const DEFAULT_EXTRACTORS: &str = include_str!("../../../config/extractors.json");
+const DEFAULT_LOGISTICS: &str = include_str!("../../../config/logistics.json");
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -41,7 +42,36 @@ impl Extractors {
     pub fn miner_rate(&self, tier: &str, purity: &str) -> Result<f64, String> {
         let base = self.miners.get(tier).ok_or(format!("Unknown miner tier {tier}"))?;
         let factor = self.purity.get(purity).ok_or(format!("Unknown node purity {purity}"))?;
-        Ok(base * factor)
+        match base * factor {
+            rate if rate > 0.0 => Ok(rate),
+            _ => Err(format!("Miner {tier} on {purity} nodes needs a rate above 0 in extractors.json")),
+        }
+    }
+}
+
+/// Items per minute one belt or pipe line carries, per tier.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Logistics {
+    pub belts: BTreeMap<String, f64>,
+    pub pipes: BTreeMap<String, f64>,
+}
+
+impl Logistics {
+    pub fn belt_speed(&self, tier: &str) -> Result<f64, String> {
+        positive_speed(&self.belts, "belt", tier)
+    }
+
+    pub fn pipe_speed(&self, tier: &str) -> Result<f64, String> {
+        positive_speed(&self.pipes, "pipe", tier)
+    }
+}
+
+/// A speed of 0 would ask for endless belt lines, so it is refused.
+fn positive_speed(speeds: &BTreeMap<String, f64>, kind: &str, tier: &str) -> Result<f64, String> {
+    match speeds.get(tier) {
+        None => Err(format!("Unknown {kind} tier {tier}")),
+        Some(speed) if *speed > 0.0 => Ok(*speed),
+        Some(_) => Err(format!("The {kind} tier {tier} needs a speed above 0 in logistics.json")),
     }
 }
 
@@ -49,6 +79,7 @@ impl Extractors {
 pub struct Editable {
     pub raw: HashSet<String>,
     pub extractors: Extractors,
+    pub logistics: Logistics,
 }
 
 pub fn load_editable(config_dir: &Path, notices: &mut Vec<String>) -> Editable {
@@ -56,7 +87,9 @@ pub fn load_editable(config_dir: &Path, notices: &mut Vec<String>) -> Editable {
         json_file::read_user_file(&config_dir.join("raw_resources.json"), DEFAULT_RAW, notices);
     let extractors =
         json_file::read_user_file(&config_dir.join("extractors.json"), DEFAULT_EXTRACTORS, notices);
-    Editable { raw: raw.into_iter().collect(), extractors }
+    let logistics =
+        json_file::read_user_file(&config_dir.join("logistics.json"), DEFAULT_LOGISTICS, notices);
+    Editable { raw: raw.into_iter().collect(), extractors, logistics }
 }
 
 #[cfg(test)]
@@ -78,6 +111,16 @@ mod tests {
     }
 
     #[test]
+    fn miner_rate_of_zero_is_an_error() {
+        let mut zero = extractors();
+        zero.miners.insert("Mk1".into(), 0.0);
+        assert_eq!(
+            zero.miner_rate("Mk1", "normal"),
+            Err("Miner Mk1 on normal nodes needs a rate above 0 in extractors.json".into())
+        );
+    }
+
+    #[test]
     fn miner_rate_unknown_tier_is_an_error() {
         assert_eq!(extractors().miner_rate("Mk9", "pure"), Err("Unknown miner tier Mk9".into()));
     }
@@ -90,6 +133,31 @@ mod tests {
         assert!(editable.raw.contains("Desc_OreIron_C"));
         assert!(dir.join("raw_resources.json").is_file());
         assert!(dir.join("extractors.json").is_file());
+    }
+
+    fn logistics() -> Logistics {
+        serde_json::from_str(DEFAULT_LOGISTICS).unwrap()
+    }
+
+    #[test]
+    fn belt_speed_mk3_is_270() {
+        assert_eq!(logistics().belt_speed("Mk3"), Ok(270.0));
+    }
+
+    #[test]
+    fn belt_speed_unknown_tier_is_an_error_naming_it() {
+        assert_eq!(logistics().belt_speed("Mk9"), Err("Unknown belt tier Mk9".into()));
+    }
+
+    #[test]
+    fn belt_speed_of_zero_is_an_error() {
+        let zero = Logistics { belts: BTreeMap::from([("Mk1".to_string(), 0.0)]), pipes: BTreeMap::new() };
+        assert_eq!(zero.belt_speed("Mk1"), Err("The belt tier Mk1 needs a speed above 0 in logistics.json".into()));
+    }
+
+    #[test]
+    fn pipe_speed_mk2_is_600() {
+        assert_eq!(logistics().pipe_speed("Mk2"), Ok(600.0));
     }
 
     #[test]

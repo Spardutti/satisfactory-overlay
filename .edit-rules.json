@@ -1,0 +1,19 @@
+{
+  "text": [
+    {
+      "id": "user-files-through-safe-reader",
+      "files": "^src-tauri/src/(?!settings/json_file\\.rs$).+\\.rs$",
+      "pattern": "\\bread_json\\(",
+      "message": "Read settings and plan files through read_user_file or read_or_backup, so a broken file never stops the app.",
+      "bad": "let plans = settings::read_json(&plans_path).unwrap_or_default();",
+      "good": "plans: Mutex::new(settings::read_or_backup(&plans_path, &mut notices)),"
+    }
+  ],
+  "lessons": [
+    {
+      "id": "user-numbers-are-checked",
+      "files": "^src-tauri/src/settings/.*\\.rs$",
+      "message": "Numbers here come from files the user edits: refuse 0, negative and missing values with a plain error, like positive_speed and miner_rate do."
+    }
+  ]
+}

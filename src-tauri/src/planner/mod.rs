@@ -3,9 +3,14 @@ mod expand;
 mod limit;
 mod walk;
 mod result;
+mod targets;
+mod transport;
+mod flows;
 
 pub use limit::{Limit, RawLeft};
-pub use result::{PlanResult, RawNeed, Step, Surplus};
+pub use result::{Flow, PlanResult, RawNeed, Step, Surplus, Usage};
+pub use targets::{targets, Target};
+pub use transport::{BeltGroup, Transport};
 
 use crate::game_data::GameData;
 use std::collections::{HashMap, HashSet};
@@ -18,9 +23,12 @@ pub struct Planner<'a> {
     pub enabled_alternates: &'a HashSet<String>,
     /// items per minute one miner extracts, for the chosen tier and purity
     pub miner_rate: f64,
+    pub transport: Transport,
 }
 
 #[cfg(test)]
 mod choice_tests;
+#[cfg(test)]
+mod flow_tests;
 #[cfg(test)]
 mod tests;

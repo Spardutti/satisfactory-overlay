@@ -1,15 +1,15 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api, type Calculation, type ExtractorOptions, type Named, type Plan } from "$lib/api";
+  import { api, type Calculation, type ExtractorOptions, type Named, type Plan, type Target } from "$lib/api";
   import { emptyForm, fromPlan, toRequest } from "./form";
   import PlanForm from "./PlanForm.svelte";
   import ResultView from "./ResultView.svelte";
 
   let { editing }: { editing: Plan | null } = $props();
 
-  let targets = $state<Named[]>([]);
+  let targets = $state<Target[]>([]);
   let raws = $state<Named[]>([]);
-  let extractors = $state<ExtractorOptions>({ tiers: [], purities: [] });
+  let extractors = $state<ExtractorOptions>({ tiers: [], purities: [], belts: [], pipes: [] });
   let form = $state(emptyForm());
   let calc = $state<Calculation | null>(null);
   let error = $state("");

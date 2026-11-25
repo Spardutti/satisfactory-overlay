@@ -15,17 +15,36 @@ pub struct PlanRequest {
     pub mode: Mode,
     pub miner_tier: String,
     pub purity: String,
+    #[serde(default = "first_tier")]
+    pub belt_tier: String,
+    #[serde(default = "first_tier")]
+    pub pipe_tier: String,
     #[serde(default)]
     pub choices: HashMap<String, String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// Plans saved before belts and pipes existed get the slowest tier.
+fn first_tier() -> String {
+    "Mk1".into()
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChecklistStep {
     pub label: String,
     pub detail: String,
     pub total: u32,
     pub built: u32,
+    /// one line per input, e.g. "Iron Ore: 3 belts · 2 each (60)"
+    #[serde(default)]
+    pub inputs: Vec<String>,
+    #[serde(default)]
+    pub output: String,
+    #[serde(default)]
+    pub goes_to: String,
+    /// the item this card makes or mines
+    #[serde(default)]
+    pub item: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

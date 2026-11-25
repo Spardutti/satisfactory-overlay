@@ -1,6 +1,6 @@
 use crate::game_data::GameData;
-use crate::planner::{Limit, PlanResult, Planner};
-use crate::plans::{Mode, PlanRequest};
+use crate::planner::{Limit, PlanResult, Planner, Transport};
+use crate::plans::{checklist, ChecklistStep, Mode, PlanRequest};
 use crate::state::{lock, AppState};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
@@ -19,6 +19,8 @@ pub struct RecipeOption {
 pub struct Calculation {
     pub result: PlanResult,
     pub limit: Option<Limit>,
+    /// the same build cards the overlay shows
+    pub cards: Vec<ChecklistStep>,
     /// item id → recipes the user may pick for that step
     pub options: HashMap<String, Vec<RecipeOption>>,
 }
@@ -30,6 +32,11 @@ pub fn calculate(state: State<AppState>, request: PlanRequest) -> Result<Calcula
 
 pub fn calculate_request(state: &AppState, request: &PlanRequest) -> Result<Calculation, String> {
     let miner_rate = state.editable.extractors.miner_rate(&request.miner_tier, &request.purity)?;
+    let logistics = &state.editable.logistics;
+    let transport = Transport {
+        belt: logistics.belt_speed(&request.belt_tier)?,
+        pipe: logistics.pipe_speed(&request.pipe_tier)?,
+    };
     let alternates: HashSet<String> = lock(&state.config).enabled_alternates.iter().cloned().collect();
     let game = lock(&state.game);
     let data: &GameData = game.as_ref().ok_or("Game data is not loaded yet")?;
@@ -39,10 +46,12 @@ pub fn calculate_request(state: &AppState, request: &PlanRequest) -> Result<Calc
         choices: &request.choices,
         enabled_alternates: &alternates,
         miner_rate,
+        transport,
     };
     let (result, limit) = run_mode(&planner, request)?;
     let options = result.steps.iter().map(|s| (s.item.clone(), options_for(&planner, &s.item))).collect();
-    Ok(Calculation { result, limit, options })
+    let cards = checklist(&result, &request.miner_tier, &request.purity);
+    Ok(Calculation { result, limit, options, cards })
 }
 
 fn run_mode(planner: &Planner, request: &PlanRequest) -> Result<(PlanResult, Option<Limit>), String> {

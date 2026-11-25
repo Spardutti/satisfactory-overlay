@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ExtractorOptions, Named } from "$lib/api";
+  import { fmt, type ExtractorOptions, type Named, type Target } from "$lib/api";
   import type { FormState } from "./form";
 
   let {
@@ -10,11 +10,15 @@
     onCalculate,
   }: {
     form: FormState;
-    targets: Named[];
+    targets: Target[];
     raws: Named[];
     extractors: ExtractorOptions;
     onCalculate: () => void;
   } = $props();
+
+  const standard = $derived(
+    targets.find((t) => t.name.toLowerCase() === form.targetName.trim().toLowerCase())?.standard ?? null,
+  );
 
   function addResource() {
     const unused = raws.find((r) => !form.resources.some((row) => row.item === r.id));
@@ -30,6 +34,15 @@
       {#each targets as t (t.id)}<option value={t.name}></option>{/each}
     </datalist>
   </label>
+  {#if standard}
+    <p class="hint">
+      Standard: <strong>{fmt(standard.perMachine)} /min per {standard.buildingName}</strong>
+      {#if form.mode === "rate" && form.rate > 0}
+        {@const count = form.rate / standard.perMachine}
+        · {fmt(form.rate)} /min = {fmt(count)} {standard.buildingName}{count === 1 ? "" : "s"}
+      {/if}
+    </p>
+  {/if}
 
   <div class="modes">
     <label><input type="radio" bind:group={form.mode} value="rate" /> I want X / min</label>
@@ -67,6 +80,21 @@
     </label>
   </div>
 
+  <div class="row">
+    <label>
+      Belt
+      <select bind:value={form.beltTier}>
+        {#each extractors.belts as b (b)}<option>{b}</option>{/each}
+      </select>
+    </label>
+    <label>
+      Pipe
+      <select bind:value={form.pipeTier}>
+        {#each extractors.pipes as p (p)}<option>{p}</option>{/each}
+      </select>
+    </label>
+  </div>
+
   <button class="primary" type="submit">Calculate</button>
 </form>
 
@@ -92,6 +120,14 @@
     display: flex;
     gap: 8px;
     align-items: center;
+  }
+  .hint {
+    margin: -4px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .hint strong {
+    color: var(--orange);
   }
   .row input[type="number"] {
     width: 90px;
