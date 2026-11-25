@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
@@ -54,6 +54,9 @@ pub struct Plan {
     pub name: String,
     pub request: PlanRequest,
     pub steps: Vec<ChecklistStep>,
+    /// blueprint blocks the user moved by hand: item → [x, y]
+    #[serde(default)]
+    pub positions: BTreeMap<String, [f64; 2]>,
 }
 
 impl Plan {

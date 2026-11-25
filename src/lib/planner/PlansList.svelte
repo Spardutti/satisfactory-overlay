@@ -3,7 +3,7 @@
   import { onMount } from "svelte";
   import { api, PLANS_CHANGED, progress, type Plan, type PlanStore } from "$lib/api";
 
-  let { onEdit }: { onEdit: (plan: Plan) => void } = $props();
+  let { onEdit, onBlueprint }: { onEdit: (plan: Plan) => void; onBlueprint: (plan: Plan) => void } = $props();
 
   let store = $state<PlanStore>({ active: null, plans: [] });
 
@@ -34,6 +34,7 @@
         {plan.name}
       </label>
       <span class="muted">{p.built} / {p.total} machines</span>
+      <button onclick={() => onBlueprint(plan)}>Blueprint</button>
       <button onclick={() => onEdit(plan)}>Edit</button>
       <button onclick={() => remove(plan)}>Delete</button>
     </div>

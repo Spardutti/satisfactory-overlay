@@ -16,7 +16,8 @@
         "title": "Satisfactory Planner",
         "url": "/",
         "width": 1000,
-        "height": 760
+        "height": 760,
+        "create": false
       },
       {
         "label": "overlay",
@@ -29,7 +30,8 @@
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "resizable": true,
-        "shadow": false
+        "shadow": false,
+        "create": false
       }
     ],
     "security": {

@@ -13,7 +13,7 @@ fn miner_card(raw: &RawNeed, tier: &str, purity: &str) -> Option<ChecklistStep> 
     let miners = raw.miners?;
     Some(ChecklistStep {
         label: format!("Miner {tier} — {}", raw.item_name),
-        detail: format!("{miners} × Miner {tier} · {} /min on {purity} nodes", round(raw.per_min)),
+        detail: miner_detail(raw, tier, purity),
         total: miners,
         built: 0,
         inputs: vec![],
@@ -21,6 +21,17 @@ fn miner_card(raw: &RawNeed, tier: &str, purity: &str) -> Option<ChecklistStep> 
         goes_to: goes_to_text(&raw.goes_to),
         item: raw.item.clone(),
     })
+}
+
+/// "2 × Miner Mk2 on 2 normal nodes · 120 /min", plus a warning when the belt holds miners back.
+fn miner_detail(raw: &RawNeed, tier: &str, purity: &str) -> String {
+    let miners = raw.miners.unwrap_or(0);
+    let nodes = if miners == 1 { "node" } else { "nodes" };
+    let base = format!("{miners} × Miner {tier} on {miners} {purity} {nodes} · {} /min", round(raw.per_min));
+    match raw.capped {
+        true => format!("{base} · the belt holds each miner back, a faster belt needs fewer nodes"),
+        false => base,
+    }
 }
 
 fn machine_card(step: &Step) -> ChecklistStep {

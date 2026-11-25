@@ -1,14 +1,15 @@
 mod commands;
 pub mod game_data;
+mod layout;
 mod overlay;
 pub mod planner;
 mod plans;
 mod settings;
 mod state;
 
-use commands::{data, planning, plans as plan_cmds};
+use commands::{data, layout as layout_cmds, planning, plans as plan_cmds};
 use state::{lock, AppState};
-use tauri::{App, Manager, Window, WindowEvent};
+use tauri::{App, Manager, WebviewWindowBuilder, Window, WindowEvent};
 use tauri_plugin_window_state::StateFlags;
 
 const PLANNER: &str = "planner";
@@ -20,6 +21,14 @@ fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     app.manage(state);
     let errors = overlay::register_hotkeys(app.handle(), &hotkeys);
     lock(&app.state::<AppState>().notices).extend(errors);
+    open_windows(app)
+}
+
+/// Windows open only after the state is managed; Tauri would open them before setup runs.
+fn open_windows(app: &App) -> Result<(), Box<dyn std::error::Error>> {
+    for config in &app.config().app.windows {
+        WebviewWindowBuilder::from_config(app.handle(), config)?.build()?;
+    }
     Ok(())
 }
 
@@ -51,6 +60,9 @@ pub fn run() {
             data::set_alternate,
             data::extractor_options,
             planning::calculate,
+            layout_cmds::plan_layout,
+            layout_cmds::move_block,
+            layout_cmds::reset_layout,
             plan_cmds::list_plans,
             plan_cmds::save_plan,
             plan_cmds::delete_plan,

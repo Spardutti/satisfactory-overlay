@@ -31,6 +31,8 @@ pub struct RawNeed {
     pub per_min: f64,
     pub fluid: bool,
     pub miners: Option<u32>,
+    /// each miner makes more than one belt carries, so it is held back
+    pub capped: bool,
     /// miners per output belt; for fluids and gathered items, one group per line
     pub belts: Vec<BeltGroup>,
     pub goes_to: Vec<Usage>,
@@ -40,6 +42,7 @@ pub struct RawNeed {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Usage {
+    pub item: String,
     pub item_name: String,
     pub per_min: f64,
 }

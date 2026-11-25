@@ -28,7 +28,31 @@ fn plan_rate_120_screws_screw_step_input_is_30_iron_rod() {
 fn plan_rate_iron_ingot_goes_to_iron_rod() {
     let result = setup(fixture()).planner().plan_rate("Desc_IronScrew_C", 120.0).unwrap();
     let ingot = result.steps.iter().find(|s| s.item == "Desc_IronIngot_C").unwrap();
-    assert_eq!(ingot.goes_to, vec![Usage { item_name: "Iron Rod".into(), per_min: 30.0 }]);
+    assert_eq!(ingot.goes_to, vec![Usage { item: "Desc_IronRod_C".into(), item_name: "Iron Rod".into(), per_min: 30.0 }]);
+}
+
+fn ore_with_mk2_miner_on_mk1_belt() -> RawNeed {
+    let mut s = setup(fixture());
+    s.miner_rate = 120.0;
+    let result = s.planner().plan_rate("Desc_IronScrew_C", 480.0).unwrap();
+    result.raw.into_iter().find(|r| r.item == "Desc_OreIron_C").unwrap()
+}
+
+#[test]
+fn plan_rate_mk2_miner_on_mk1_belt_needs_2_miners_for_120_ore() {
+    let ore = ore_with_mk2_miner_on_mk1_belt();
+    assert_eq!((ore.per_min, ore.miners), (120.0, Some(2)));
+}
+
+#[test]
+fn plan_rate_mk2_miner_on_mk1_belt_flags_the_capped_miner() {
+    assert!(ore_with_mk2_miner_on_mk1_belt().capped);
+}
+
+#[test]
+fn plan_rate_mk1_miner_on_mk1_belt_is_not_capped() {
+    let result = setup(fixture()).planner().plan_rate("Desc_IronScrew_C", 120.0).unwrap();
+    assert!(!result.raw[0].capped);
 }
 
 #[test]
