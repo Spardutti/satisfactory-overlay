@@ -4,7 +4,7 @@
   import Belt from "./Belt.svelte";
   import BlockView from "./BlockView.svelte";
   import { itemColor } from "./colors";
-  import { buildRoutes } from "./routes";
+  import { buildRoutes } from "./belts";
   import { bounds, fitView, panBy, zoomAt, type View } from "./view";
 
   let {

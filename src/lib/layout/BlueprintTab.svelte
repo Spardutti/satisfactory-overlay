@@ -27,7 +27,7 @@
   }
 
   function saveMove(item: string, x: number, y: number) {
-    if (planId) api.moveBlock(planId, item, x, y).catch((e) => (error = String(e)));
+    if (planId) api.moveBlock({ planId, item, x, y }).catch((e) => (error = String(e)));
   }
 
   async function resetLayout() {

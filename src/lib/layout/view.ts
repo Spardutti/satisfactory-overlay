@@ -1,4 +1,3 @@
-/** Where the blueprint canvas sits: scale and offset of its top-left corner. */
 export type View = { scale: number; x: number; y: number };
 type Point = { x: number; y: number };
 type Size = { width: number; height: number };
@@ -26,7 +25,6 @@ type Box = { x: number; y: number; width: number; height: number };
 /** Room for the buses that stick out on both sides of a block. */
 const BUS_ROOM = 120;
 
-/** The box around every block, wherever the user moved them. */
 export function bounds(blocks: Box[]): Box {
   if (!blocks.length) return { x: 0, y: 0, width: 1, height: 1 };
   const left = Math.min(...blocks.map((b) => b.x)) - BUS_ROOM;
@@ -36,7 +34,6 @@ export function bounds(blocks: Box[]): Box {
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
-/** The view that fits the box inside the screen, centered. */
 export function fitView(box: Box, screen: Size): View {
   const room = { width: screen.width - 2 * FIT_MARGIN, height: screen.height - 2 * FIT_MARGIN };
   const scale = clampScale(Math.min(room.width / box.width, room.height / box.height));

@@ -18,7 +18,6 @@ pub fn row_height(rows: &[Row]) -> f64 {
     METRICS.row_height + (inputs - 1.0).max(0.0) * METRICS.input_step
 }
 
-/// Width and height of a block that holds these rows.
 pub fn block_size(rows: &[Row]) -> (f64, f64) {
     let m = METRICS;
     let widest = rows.iter().map(|r| r.machines.len()).max().unwrap_or(0) as f64;

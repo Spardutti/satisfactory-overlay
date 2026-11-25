@@ -68,7 +68,7 @@ function orderColumns(group: Link[]) {
 function shiftTogether(group: Link[], taken: Taken): boolean {
   for (let step = 0; step < TRIES; step++) {
     const dx = offset(step);
-    if (!group.every((l) => fits(l, l.jogX! + dx, first(l).y, taken))) continue;
+    if (!group.every((l) => fits(l, { x: l.jogX! + dx, approachY: first(l).y }, taken))) continue;
     for (const l of group) l.jogX! += dx;
     return true;
   }
@@ -89,7 +89,7 @@ function placeAlone(l: Link, taken: Taken) {
   for (const approachY of [first(l).y, ...approaches(l)]) {
     for (let step = 0; step < TRIES; step++) {
       const x = l.jogX! + offset(step);
-      if (!fits(l, x, approachY, taken)) continue;
+      if (!fits(l, { x, approachY }, taken)) continue;
       [l.jogX, l.approachY] = [x, approachY];
       break;
     }
@@ -108,7 +108,9 @@ function runsOf(l: Link, x: number, approachY: number): Taken {
 const clash = (runs: Run[], taken: Run[]) =>
   runs.some((r) => taken.some((t) => Math.abs(t.at - r.at) < SPACING && t.from < r.to && r.from < t.to));
 
-function fits(l: Link, x: number, approachY: number, taken: Taken): boolean {
+type Turn = { x: number; approachY: number };
+
+function fits(l: Link, { x, approachY }: Turn, taken: Taken): boolean {
   const runs = runsOf(l, x, approachY);
   const between = x > last(l).x + 4 && x < first(l).x - 4;
   return between && !clash(runs.v, taken.v) && !clash(runs.h, taken.h);

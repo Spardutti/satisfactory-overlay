@@ -1,4 +1,4 @@
-use super::Row;
+use super::{BeltLine, Row};
 use crate::planner::Transport;
 use serde::Serialize;
 
@@ -49,13 +49,12 @@ pub fn input_buses(rows: &[Row], transport: Transport) -> Vec<Bus> {
         let amounts: Vec<f64> = rows.iter().map(|r| r.inputs[input].per_min).collect();
         for group in next_fit(&amounts, transport.capacity(belt.fluid)) {
             let taps = group.iter().map(|&row| Tap { row, input, per_min: amounts[row] }).collect();
-            buses.push(bus(&belt.item, &belt.item_name, belt.fluid, taps));
+            buses.push(bus(belt, taps));
         }
     }
     buses
 }
 
-/// Output buses, each collecting a run of neighbouring rows.
 pub fn output_buses(rows: &[Row], transport: Transport) -> Vec<Bus> {
     let Some(first) = rows.first() else { return vec![] };
     let out = &first.output;
@@ -64,14 +63,14 @@ pub fn output_buses(rows: &[Row], transport: Transport) -> Vec<Bus> {
         .into_iter()
         .map(|group| {
             let taps = group.iter().map(|&row| Tap { row, input: 0, per_min: amounts[row] }).collect();
-            bus(&out.item, &out.item_name, out.fluid, taps)
+            bus(out, taps)
         })
         .collect()
 }
 
-fn bus(item: &str, item_name: &str, fluid: bool, taps: Vec<Tap>) -> Bus {
+fn bus(line: &BeltLine, taps: Vec<Tap>) -> Bus {
     let per_min = taps.iter().map(|t: &Tap| t.per_min).sum();
-    Bus { item: item.to_string(), item_name: item_name.to_string(), fluid, per_min, taps }
+    Bus { item: line.item.clone(), item_name: line.item_name.clone(), fluid: line.fluid, per_min, taps }
 }
 
 #[cfg(test)]

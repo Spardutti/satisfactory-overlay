@@ -117,8 +117,7 @@ export const api = {
   extractorOptions: () => invoke<ExtractorOptions>("extractor_options"),
   calculate: (request: PlanRequest) => invoke<Calculation>("calculate", { request }),
   planLayout: (planId: string) => invoke<Layout>("plan_layout", { planId }),
-  moveBlock: (planId: string, item: string, x: number, y: number) =>
-    invoke<void>("move_block", { change: { planId, item, x, y } }),
+  moveBlock: (change: { planId: string; item: string; x: number; y: number }) => invoke<void>("move_block", { change }),
   resetLayout: (planId: string) => invoke<void>("reset_layout", { planId }),
   listPlans: () => invoke<PlanStore>("list_plans"),
   savePlan: (draft: { id: string | null; name: string; request: PlanRequest }) =>
