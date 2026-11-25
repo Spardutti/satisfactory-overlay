@@ -75,12 +75,15 @@ export type ChecklistStep = {
   goesTo: string;
   item: string;
 };
-export type Plan = { id: string; name: string; request: PlanRequest; steps: ChecklistStep[] };
-export type PlanStore = { active: string | null; plans: Plan[] };
-export type HotkeyStatus = {
-  keys: { toggleMode: string; toggleVisible: string; markNext: string };
-  errors: string[];
+export type Plan = {
+  id: string;
+  name: string;
+  request: PlanRequest;
+  steps: ChecklistStep[];
+  /** machines ticked as built: item → machine rows */
+  built: Record<string, number[]>;
 };
+export type PlanStore = { plans: Plan[] };
 
 export type BeltLine = { item: string; itemName: string; perMin: number; fluid: boolean; over: boolean };
 export type LayoutRow = { inputs: BeltLine[]; machines: number[]; output: BeltLine; node: string | null };
@@ -111,7 +114,6 @@ export type Metrics = {
 export type Layout = { width: number; height: number; blocks: Block[]; connections: Connection[]; metrics: Metrics };
 
 export const PLANS_CHANGED = "plans-changed";
-export const OVERLAY_MODE = "overlay-mode";
 
 export const api = {
   loadGameData: () => invoke<DataSummary | null>("load_game_data"),
@@ -130,12 +132,7 @@ export const api = {
   savePlan: (draft: { id: string | null; name: string; request: PlanRequest }) =>
     invoke<Plan>("save_plan", { draft }),
   deletePlan: (id: string) => invoke<void>("delete_plan", { id }),
-  setActivePlan: (id: string) => invoke<void>("set_active_plan", { id }),
-  adjustStep: (planId: string, step: number, delta: number) =>
-    invoke<void>("adjust_step", { change: { planId, step, delta } }),
-  markNextStep: () => invoke<void>("mark_next_step"),
-  overlayInteractive: () => invoke<boolean>("overlay_interactive"),
-  hotkeyStatus: () => invoke<HotkeyStatus>("hotkey_status"),
+  toggleBuilt: (change: { planId: string; item: string; row: number }) => invoke<void>("toggle_built", { change }),
 };
 
 export function progress(plan: Plan): { built: number; total: number } {

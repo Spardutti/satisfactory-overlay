@@ -21,7 +21,7 @@ pub struct Calculation {
     pub limit: Option<Limit>,
     /// the most target per minute the listed nodes allow, when an ore runs short
     pub node_limit: Option<f64>,
-    /// the same build cards the overlay shows
+    /// build cards, in build order
     pub cards: Vec<ChecklistStep>,
     /// item id → recipes the user may pick for that step
     pub options: HashMap<String, Vec<RecipeOption>>,

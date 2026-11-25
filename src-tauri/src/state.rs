@@ -2,7 +2,6 @@ use crate::game_data::GameData;
 use crate::plans::PlanStore;
 use crate::settings::{self, AppConfig, Editable};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
 
 pub struct AppState {
@@ -12,7 +11,6 @@ pub struct AppState {
     pub config: Mutex<AppConfig>,
     pub game: Mutex<Option<GameData>>,
     pub plans: Mutex<PlanStore>,
-    pub overlay_interactive: AtomicBool,
     pub notices: Mutex<Vec<String>>,
 }
 
@@ -27,7 +25,6 @@ impl AppState {
             config: Mutex::new(settings::read_or_backup(&config_path, &mut notices)),
             game: Mutex::new(None),
             plans: Mutex::new(settings::read_or_backup(&plans_path, &mut notices)),
-            overlay_interactive: AtomicBool::new(true),
             notices: Mutex::new(notices),
             config_path,
             plans_path,

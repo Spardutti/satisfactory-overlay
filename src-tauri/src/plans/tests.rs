@@ -3,8 +3,8 @@ use super::*;
 use crate::planner::NodeCounts;
 use std::collections::HashMap;
 
-fn step(label: &str, total: u32, built: u32) -> ChecklistStep {
-    ChecklistStep { label: label.into(), total, built, ..ChecklistStep::default() }
+fn step(item: &str, total: u32) -> ChecklistStep {
+    ChecklistStep { label: item.into(), item: item.into(), total, ..ChecklistStep::default() }
 }
 
 fn plan(id: &str, steps: Vec<ChecklistStep>) -> Plan {
@@ -17,7 +17,7 @@ fn plan(id: &str, steps: Vec<ChecklistStep>) -> Plan {
         choices: HashMap::new(),
         nodes: Default::default(),
     };
-    Plan { id: id.into(), name: id.into(), request, steps, positions: Default::default() }
+    Plan { id: id.into(), name: id.into(), request, steps, positions: Default::default(), built: Default::default() }
 }
 
 fn built(plan: &Plan) -> Vec<u32> {
@@ -25,79 +25,75 @@ fn built(plan: &Plan) -> Vec<u32> {
 }
 
 #[test]
-fn mark_next_fills_first_unfinished_step() {
-    let mut p = plan("a", vec![step("Smelter", 1, 1), step("Rod", 2, 0)]);
-    assert!(p.mark_next());
-    assert_eq!(built(&p), vec![1, 1]);
+fn toggle_built_ticks_one_machine() {
+    let mut p = plan("a", vec![step("Smelter", 2), step("Rod", 3)]);
+    p.toggle_built("Rod", 2);
+    assert_eq!((built(&p), p.built["Rod"].iter().copied().collect::<Vec<_>>()), (vec![0, 1], vec![2]));
 }
 
 #[test]
-fn mark_next_when_everything_is_built_changes_nothing() {
-    let mut p = plan("a", vec![step("Smelter", 1, 1)]);
-    assert!(!p.mark_next());
-    assert_eq!(built(&p), vec![1]);
-}
-
-#[test]
-fn adjust_stops_at_total() {
-    let mut p = plan("a", vec![step("Rod", 2, 2)]);
-    p.adjust(0, 1);
-    assert_eq!(built(&p), vec![2]);
-}
-
-#[test]
-fn adjust_stops_at_zero() {
-    let mut p = plan("a", vec![step("Rod", 2, 0)]);
-    p.adjust(0, -1);
+fn toggle_built_twice_unticks_the_machine() {
+    let mut p = plan("a", vec![step("Rod", 3)]);
+    p.toggle_built("Rod", 1);
+    p.toggle_built("Rod", 1);
     assert_eq!(built(&p), vec![0]);
 }
 
 #[test]
-fn replace_steps_keeps_progress_of_matching_labels_within_new_total() {
-    let mut p = plan("a", vec![step("Smelter", 2, 2), step("Rod", 3, 3)]);
-    p.replace_steps(vec![step("Smelter", 1, 0), step("Rod", 4, 0), step("Screw", 2, 0)]);
-    assert_eq!(built(&p), vec![1, 3, 0]);
+fn toggle_built_last_machine_is_ticked() {
+    let mut p = plan("a", vec![step("Rod", 3)]);
+    p.toggle_built("Rod", 2);
+    assert_eq!(built(&p), vec![1]);
 }
 
 #[test]
-fn upsert_first_plan_becomes_active() {
-    let mut store = PlanStore::default();
-    store.upsert(plan("a", vec![]));
-    store.upsert(plan("b", vec![]));
-    assert_eq!(store.active.as_deref(), Some("a"));
+fn toggle_built_row_past_the_machine_count_is_ignored() {
+    let mut p = plan("a", vec![step("Rod", 3)]);
+    p.toggle_built("Rod", 3);
+    assert_eq!((built(&p), p.built.is_empty()), (vec![0], true));
+}
+
+#[test]
+fn toggle_built_item_without_a_step_is_ignored() {
+    let mut p = plan("a", vec![step("Rod", 3)]);
+    p.toggle_built("Water", 0);
+    assert!(p.built.is_empty());
+}
+
+#[test]
+fn replace_steps_drops_ticks_on_machines_that_no_longer_exist() {
+    let mut p = plan("a", vec![step("Rod", 3)]);
+    p.toggle_built("Rod", 0);
+    p.toggle_built("Rod", 2);
+    p.replace_steps(vec![step("Rod", 2), step("Screw", 1)]);
+    assert_eq!((built(&p), p.built["Rod"].iter().copied().collect::<Vec<_>>()), (vec![1, 0], vec![0]));
 }
 
 #[test]
 fn upsert_same_id_replaces_plan() {
     let mut store = PlanStore::default();
     store.upsert(plan("a", vec![]));
-    store.upsert(plan("a", vec![step("Rod", 1, 0)]));
+    store.upsert(plan("a", vec![step("Rod", 1)]));
     assert_eq!((store.plans.len(), store.plans[0].steps.len()), (1, 1));
 }
 
 #[test]
-fn remove_active_plan_activates_the_next_one() {
+fn remove_drops_only_that_plan() {
     let mut store = PlanStore::default();
     store.upsert(plan("a", vec![]));
     store.upsert(plan("b", vec![]));
     store.remove("a");
-    assert_eq!(store.active.as_deref(), Some("b"));
+    assert_eq!(store.plans.iter().map(|p| p.id.as_str()).collect::<Vec<_>>(), vec!["b"]);
 }
 
 #[test]
-fn set_active_unknown_id_keeps_current() {
+fn plan_store_round_trips_ticks_through_json() {
     let mut store = PlanStore::default();
-    store.upsert(plan("a", vec![]));
-    store.set_active("missing");
-    assert_eq!(store.active.as_deref(), Some("a"));
-}
-
-#[test]
-fn plan_store_round_trips_through_json() {
-    let mut store = PlanStore::default();
-    store.upsert(plan("a", vec![step("Rod", 2, 1)]));
+    let mut p = plan("a", vec![step("Rod", 2)]);
+    p.toggle_built("Rod", 1);
+    store.upsert(p);
     let back: PlanStore = serde_json::from_str(&serde_json::to_string(&store).unwrap()).unwrap();
-    assert_eq!((back.active, back.plans[0].steps.clone()), (Some("a".into()), vec![step("Rod", 2, 1)]));
+    assert_eq!((built(&back.plans[0]), back.plans[0].built["Rod"].len()), (vec![1], 1));
 }
 
 #[test]
@@ -113,4 +109,22 @@ fn set_nodes_all_zero_removes_the_ore() {
     request.set_nodes("Desc_OreIron_C".into(), NodeCounts { pure: 1, normal: 0, impure: 0 });
     request.set_nodes("Desc_OreIron_C".into(), NodeCounts::default());
     assert!(request.nodes.is_empty());
+}
+
+#[test]
+fn replace_steps_drops_ticks_when_the_recipe_changes() {
+    let mut p = plan("a", vec![step("Screw", 6)]);
+    p.toggle_built("Screw", 0);
+    let assembler = ChecklistStep { label: "Assembler — Cast Screw".into(), ..step("Screw", 6) };
+    p.replace_steps(vec![assembler]);
+    assert_eq!((built(&p), p.built.is_empty()), (vec![0], true));
+}
+
+#[test]
+fn set_nodes_clears_the_ticks_of_that_ore() {
+    let mut p = plan("a", vec![step("Desc_OreIron_C", 2), step("Rod", 2)]);
+    p.toggle_built("Desc_OreIron_C", 0);
+    p.toggle_built("Rod", 0);
+    p.set_nodes("Desc_OreIron_C".into(), NodeCounts { pure: 1, normal: 0, impure: 0 });
+    assert_eq!(p.built.keys().map(String::as_str).collect::<Vec<_>>(), vec!["Rod"]);
 }

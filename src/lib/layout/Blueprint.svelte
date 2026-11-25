@@ -9,12 +9,22 @@
 
   let {
     layout = $bindable(),
+    built,
     onMoved,
-  }: { layout: Layout; onMoved: (item: string, x: number, y: number) => void } = $props();
+    onToggle,
+  }: {
+    layout: Layout;
+    built: Record<string, number[]>;
+    onMoved: (item: string, x: number, y: number) => void;
+    onToggle: (item: string, row: number) => void;
+  } = $props();
 
   let screen = $state<HTMLDivElement>();
   let view = $state<View>({ scale: 1, x: 0, y: 0 });
-  let drag: { x: number; y: number; block: Block | null; moved: boolean } | null = null;
+  type Drag = { startX: number; startY: number; x: number; y: number; block: Block | null; row: number | null; moved: boolean };
+  let drag: Drag | null = null;
+  /** Pixels a press may wobble and still count as a click. */
+  const CLICK_SLOP = 4;
 
   function fit() {
     if (!screen) return;
@@ -36,12 +46,15 @@
     if (target.closest("button")) return;
     const item = target.closest("[data-block]")?.getAttribute("data-block");
     const block = layout.blocks.find((b) => b.item === item) ?? null;
-    drag = { x: e.clientX, y: e.clientY, block, moved: false };
+    const row = target.closest("[data-row]")?.getAttribute("data-row");
+    const [x, y] = [e.clientX, e.clientY];
+    drag = { startX: x, startY: y, x, y, block, row: row == null ? null : Number(row), moved: false };
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
   }
 
   function onMove(e: PointerEvent) {
     if (!drag) return;
+    if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < CLICK_SLOP) return;
     const [dx, dy] = [e.clientX - drag.x, e.clientY - drag.y];
     if (drag.block) {
       drag.block.x += dx / view.scale;
@@ -49,13 +62,16 @@
     } else {
       view = panBy(view, dx, dy);
     }
-    drag = { ...drag, x: e.clientX, y: e.clientY, moved: drag.moved || dx !== 0 || dy !== 0 };
+    drag = { ...drag, x: e.clientX, y: e.clientY, moved: true };
   }
 
   /** Also runs when the pointer is lost mid-drag, e.g. on alt-tab, so a drag never sticks. */
-  function onUp() {
-    if (drag?.block && drag.moved) onMoved(drag.block.item, Math.round(drag.block.x), Math.round(drag.block.y));
+  function onUp(e: PointerEvent) {
+    const done = drag;
     drag = null;
+    if (!done?.block) return;
+    if (done.moved) onMoved(done.block.item, Math.round(done.block.x), Math.round(done.block.y));
+    else if (done.row !== null && e.type === "pointerup") onToggle(done.block.item, done.row);
   }
 
   const routes = $derived(buildRoutes(layout));
@@ -74,7 +90,7 @@
         <text class="link-label" x={branch.label.x} y={branch.label.y} style:fill={itemColor(branch.item)}>{fmt(branch.perMin)}</text>
       {/each}
       {#each layout.blocks as block (block.item)}
-        <BlockView {block} metrics={layout.metrics} />
+        <BlockView {block} metrics={layout.metrics} built={built[block.item] ?? []} />
       {/each}
     </g>
   </svg>

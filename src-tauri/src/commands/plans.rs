@@ -24,10 +24,10 @@ pub struct PlanDraft {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct StepChange {
+pub struct BuiltToggle {
     plan_id: String,
-    step: usize,
-    delta: i32,
+    item: String,
+    row: u32,
 }
 
 #[derive(Deserialize)]
@@ -41,15 +41,11 @@ pub struct NodesChange {
 /// Records the nodes found for one ore of a saved plan and recalculates it, keeping its progress.
 #[tauri::command]
 pub fn set_nodes(app: AppHandle, state: State<AppState>, change: NodesChange) -> Result<(), String> {
-    let mut request = lock(&state.plans).get_mut(&change.plan_id).ok_or("That plan no longer exists")?.request.clone();
-    request.set_nodes(change.item, change.nodes);
-    let steps = checklist(&calculate_request(&state, &request)?.result, &request.miner_tier);
-    change_plans(&app, |store| {
-        if let Some(plan) = store.get_mut(&change.plan_id) {
-            plan.request = request;
-            plan.replace_steps(steps);
-        }
-    })
+    let mut plan = lock(&state.plans).get_mut(&change.plan_id).ok_or("That plan no longer exists")?.clone();
+    plan.set_nodes(change.item, change.nodes);
+    let steps = checklist(&calculate_request(&state, &plan.request)?.result, &plan.request.miner_tier);
+    plan.replace_steps(steps);
+    change_plans(&app, |store| store.upsert(plan))
 }
 
 /// Saves a new plan, or recalculates an existing one keeping its progress.
@@ -67,6 +63,7 @@ pub fn save_plan(app: AppHandle, state: State<AppState>, draft: PlanDraft) -> Re
             request: request.clone(),
             steps: vec![],
             positions: Default::default(),
+            built: Default::default(),
         });
         plan.name = name;
         plan.request = request;
@@ -82,25 +79,12 @@ pub fn delete_plan(app: AppHandle, id: String) -> Result<(), String> {
     change_plans(&app, |store| store.remove(&id))
 }
 
+/// Ticks or unticks one machine of a saved plan in the blueprint.
 #[tauri::command]
-pub fn set_active_plan(app: AppHandle, id: String) -> Result<(), String> {
-    change_plans(&app, |store| store.set_active(&id))
-}
-
-#[tauri::command]
-pub fn adjust_step(app: AppHandle, change: StepChange) -> Result<(), String> {
+pub fn toggle_built(app: AppHandle, change: BuiltToggle) -> Result<(), String> {
     change_plans(&app, |store| {
         if let Some(plan) = store.get_mut(&change.plan_id) {
-            plan.adjust(change.step, change.delta);
-        }
-    })
-}
-
-#[tauri::command]
-pub fn mark_next_step(app: AppHandle) -> Result<(), String> {
-    change_plans(&app, |store| {
-        if let Some(plan) = store.active_mut() {
-            plan.mark_next();
+            plan.toggle_built(&change.item, change.row);
         }
     })
 }
