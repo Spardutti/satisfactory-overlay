@@ -87,12 +87,25 @@ impl Plan {
         self.count_built();
     }
 
-    /// Replaces the steps; ticks on machines that no longer exist go away.
+    /// Entering nodes reorders an ore's miners, so its ticks start over.
+    pub fn set_nodes(&mut self, item: String, counts: NodeCounts) {
+        self.built.remove(&item);
+        self.request.set_nodes(item, counts);
+        self.count_built();
+    }
+
+    /// Replaces the steps; ticks go away on machines that are gone or now another recipe.
     pub fn replace_steps(&mut self, steps: Vec<ChecklistStep>) {
+        let old: HashMap<String, String> = self.steps.iter().map(|s| (s.item.clone(), s.label.clone())).collect();
         self.steps = steps;
-        let totals: HashMap<&str, u32> = self.steps.iter().map(|s| (s.item.as_str(), s.total)).collect();
+        let kept: HashMap<&str, u32> = self
+            .steps
+            .iter()
+            .filter(|s| old.get(&s.item) == Some(&s.label))
+            .map(|s| (s.item.as_str(), s.total))
+            .collect();
         self.built.retain(|item, rows| {
-            let total = totals.get(item.as_str()).copied().unwrap_or(0);
+            let total = kept.get(item.as_str()).copied().unwrap_or(0);
             rows.retain(|row| *row < total);
             !rows.is_empty()
         });

@@ -110,3 +110,21 @@ fn set_nodes_all_zero_removes_the_ore() {
     request.set_nodes("Desc_OreIron_C".into(), NodeCounts::default());
     assert!(request.nodes.is_empty());
 }
+
+#[test]
+fn replace_steps_drops_ticks_when_the_recipe_changes() {
+    let mut p = plan("a", vec![step("Screw", 6)]);
+    p.toggle_built("Screw", 0);
+    let assembler = ChecklistStep { label: "Assembler — Cast Screw".into(), ..step("Screw", 6) };
+    p.replace_steps(vec![assembler]);
+    assert_eq!((built(&p), p.built.is_empty()), (vec![0], true));
+}
+
+#[test]
+fn set_nodes_clears_the_ticks_of_that_ore() {
+    let mut p = plan("a", vec![step("Desc_OreIron_C", 2), step("Rod", 2)]);
+    p.toggle_built("Desc_OreIron_C", 0);
+    p.toggle_built("Rod", 0);
+    p.set_nodes("Desc_OreIron_C".into(), NodeCounts { pure: 1, normal: 0, impure: 0 });
+    assert_eq!(p.built.keys().map(String::as_str).collect::<Vec<_>>(), vec!["Rod"]);
+}

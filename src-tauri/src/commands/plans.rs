@@ -41,15 +41,11 @@ pub struct NodesChange {
 /// Records the nodes found for one ore of a saved plan and recalculates it, keeping its progress.
 #[tauri::command]
 pub fn set_nodes(app: AppHandle, state: State<AppState>, change: NodesChange) -> Result<(), String> {
-    let mut request = lock(&state.plans).get_mut(&change.plan_id).ok_or("That plan no longer exists")?.request.clone();
-    request.set_nodes(change.item, change.nodes);
-    let steps = checklist(&calculate_request(&state, &request)?.result, &request.miner_tier);
-    change_plans(&app, |store| {
-        if let Some(plan) = store.get_mut(&change.plan_id) {
-            plan.request = request;
-            plan.replace_steps(steps);
-        }
-    })
+    let mut plan = lock(&state.plans).get_mut(&change.plan_id).ok_or("That plan no longer exists")?.clone();
+    plan.set_nodes(change.item, change.nodes);
+    let steps = checklist(&calculate_request(&state, &plan.request)?.result, &plan.request.miner_tier);
+    plan.replace_steps(steps);
+    change_plans(&app, |store| store.upsert(plan))
 }
 
 /// Saves a new plan, or recalculates an existing one keeping its progress.
