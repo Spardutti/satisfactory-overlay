@@ -43,3 +43,20 @@ fn plan_rate_every_default_recipe_looping_asks_for_an_alternate() {
     let err = setup(data).planner().plan_rate("Fuel", 1.0).unwrap_err();
     assert_eq!(err, "Every recipe you own for Fuel loops back on itself. Tick an alternate that makes it.");
 }
+
+#[test]
+fn plan_rate_user_pick_that_loops_is_not_silently_dropped() {
+    let mut data = fuel_loop_data();
+    data.recipes.push(recipe("TopFromFuel", &[("Fuel", 1.0)], &[("Top", 1.0)]));
+    data.recipes.push(recipe("TopFromOre", &[("Desc_OreIron_C", 1.0)], &[("Top", 1.0)]));
+    let mut s = setup(data);
+    s.choices.insert("Fuel".into(), "Unpack".into());
+    let err = s.planner().plan_rate("Top", 1.0).unwrap_err();
+    assert_eq!(err, "Recipe loop: Fuel → Packaged → Fuel. Pick another recipe for one of them.");
+}
+
+#[test]
+fn plan_rate_negative_rate_is_an_error() {
+    let err = setup(crate::game_data::fixture()).planner().plan_rate("Desc_IronScrew_C", -10.0).unwrap_err();
+    assert_eq!(err, "The rate must be 0 or more");
+}

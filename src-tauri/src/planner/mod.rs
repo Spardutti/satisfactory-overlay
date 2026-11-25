@@ -10,7 +10,6 @@ pub use result::{PlanResult, RawNeed, Step, Surplus};
 use crate::game_data::GameData;
 use std::collections::{HashMap, HashSet};
 
-/// Everything a calculation depends on besides its target.
 pub struct Planner<'a> {
     pub data: &'a GameData,
     pub raw: &'a HashSet<String>,

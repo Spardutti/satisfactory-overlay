@@ -14,6 +14,9 @@ struct Flow {
 impl Planner<'_> {
     /// Mode A: the machines needed to make `rate` of `target` per minute.
     pub fn plan_rate(&self, target: &str, rate: f64) -> Result<PlanResult, String> {
+        if !rate.is_finite() || rate < 0.0 {
+            return Err("The rate must be 0 or more".into());
+        }
         let walk = self.walk(target)?;
         let mut flow = Flow::default();
         flow.demand.insert(target.to_string(), rate);

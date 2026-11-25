@@ -16,12 +16,14 @@ enum WalkError {
     /// `start` is the item the loop leads back to
     Loop { start: String, message: String },
     Stuck(String),
+    /// a recipe the user chose failed; never replaced by a fallback higher up
+    Picked(String),
 }
 
 impl WalkError {
     fn message(self) -> String {
         match self {
-            WalkError::Loop { message, .. } | WalkError::Stuck(message) => message,
+            WalkError::Loop { message, .. } | WalkError::Stuck(message) | WalkError::Picked(message) => message,
         }
     }
 }
@@ -44,7 +46,7 @@ impl<'a> Planner<'a> {
         walk.path.push(item.to_string());
         if !self.raw.contains(item) {
             let recipe = match self.user_choice(item) {
-                Some(picked) => self.try_recipe(picked, walk).map(|()| picked)?,
+                Some(picked) => self.try_recipe(picked, walk).map(|()| picked).map_err(|e| WalkError::Picked(e.message()))?,
                 None => self.first_working_default(item, walk)?,
             };
             walk.chosen.insert(item.to_string(), recipe);
@@ -69,6 +71,7 @@ impl<'a> Planner<'a> {
         for recipe in self.recipe_options(item) {
             match self.try_recipe(recipe, walk) {
                 Ok(()) => return Ok(recipe),
+                Err(picked @ WalkError::Picked(_)) => return Err(picked),
                 Err(e) => {
                     first_error.get_or_insert(e);
                 }
