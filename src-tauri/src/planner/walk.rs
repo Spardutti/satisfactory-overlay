@@ -77,11 +77,16 @@ impl<'a> Planner<'a> {
                 }
             }
         }
+        let hint = self.tick_hint(item);
         Err(match first_error {
-            None => WalkError::Stuck(format!("No recipe makes {name}")),
-            Some(WalkError::Loop { start, .. }) if start == item => WalkError::Stuck(format!(
+            None if hint.is_empty() => WalkError::Stuck(format!("No recipe makes {name}")),
+            None => WalkError::Stuck(format!("No recipe you own makes {name}.{hint}")),
+            Some(WalkError::Loop { start, .. }) if start == item && hint.is_empty() => WalkError::Stuck(format!(
                 "Every recipe you own for {name} loops back on itself. Tick an alternate that makes it."
             )),
+            Some(WalkError::Loop { start, .. }) if start == item => {
+                WalkError::Stuck(format!("Every recipe you own for {name} loops back on itself.{hint}"))
+            }
             Some(other) => other,
         })
     }

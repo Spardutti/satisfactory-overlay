@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { fmt, type ExtractorOptions, type Named, type Target } from "$lib/api";
+  import { POWER, type PowerOption, type ExtractorOptions, type Named, type Target } from "$lib/api";
+  import DepotRows from "./DepotRows.svelte";
+  import PowerCount from "./PowerCount.svelte";
+  import MaterialPicker from "./MaterialPicker.svelte";
+  import PowerPicker from "./PowerPicker.svelte";
   import type { FormState } from "./form";
 
   let {
@@ -7,18 +11,36 @@
     targets,
     raws,
     extractors,
+    powerOptions,
     onCalculate,
   }: {
     form: FormState;
     targets: Target[];
     raws: Named[];
     extractors: ExtractorOptions;
+    powerOptions: PowerOption[];
     onCalculate: () => void;
   } = $props();
 
-  const standard = $derived(
-    targets.find((t) => t.name.toLowerCase() === form.targetName.trim().toLowerCase())?.standard ?? null,
-  );
+  const target = $derived(targets.find((t) => t.name.toLowerCase() === form.targetName.trim().toLowerCase()));
+  const standard = $derived(target?.standard ?? null);
+  const isPower = $derived(target?.id === POWER);
+  const materials = $derived(targets.filter((t) => t.id !== POWER));
+  const generator = $derived(powerOptions.find((o) => o.recipeId === form.choices[POWER]) ?? powerOptions[0]);
+
+  /** Power plans aim for whole generators: one to start. */
+  function pickPower() {
+    const first = powerOptions[0];
+    form.targetName = targets.find((t) => t.id === POWER)?.name ?? "";
+    form.mode = "rate";
+    form.choices[POWER] ??= first?.recipeId;
+    form.rate = generator?.megawatts ?? first?.megawatts ?? 0;
+  }
+
+  function pickMaterial() {
+    form.targetName = "";
+    delete form.choices[POWER];
+  }
 
   function addResource() {
     const unused = raws.find((r) => !form.resources.some((row) => row.item === r.id));
@@ -29,44 +51,44 @@
 <form class="plan-form" onsubmit={(e) => (e.preventDefault(), onCalculate())}>
   <section>
     <h3><span>1</span> What do you want to build?</h3>
-    <input list="targets" bind:value={form.targetName} placeholder="e.g. AI Expansion Server" aria-label="Target item" />
-    <datalist id="targets">
-      {#each targets as t (t.id)}<option value={t.name}></option>{/each}
-    </datalist>
-    {#if standard}
-      <p class="hint">
-        <strong>{fmt(standard.perMachine)} /min</strong> per {standard.buildingName}
-        {#if form.mode === "rate" && form.rate > 0}
-          {@const count = form.rate / standard.perMachine}
-          · {fmt(form.rate)} /min needs {fmt(count)} {standard.buildingName}{count === 1 ? "" : "s"}
-        {/if}
-      </p>
+    <div class="modes">
+      <button type="button" class:on={!isPower} onclick={pickMaterial}>Material</button>
+      <button type="button" class:on={isPower} onclick={pickPower}>Power</button>
+    </div>
+    {#if isPower}
+      <PowerPicker bind:choice={form.choices[POWER]} options={powerOptions} />
+    {:else}
+      <MaterialPicker bind:targetName={form.targetName} {materials} {standard} rate={form.mode === "rate" ? form.rate : 0} />
     {/if}
   </section>
 
   <section>
     <h3><span>2</span> How much?</h3>
-    <div class="modes">
-      <button type="button" class:on={form.mode === "rate"} onclick={() => (form.mode = "rate")}>I want X / min</button>
-      <button type="button" class:on={form.mode === "resources"} onclick={() => (form.mode = "resources")}>I have resources</button>
-    </div>
-    {#if form.mode === "rate"}
-      <label class="row">
-        <input type="number" min="0" step="any" bind:value={form.rate} aria-label="Per minute" />
-        <span class="muted">/min</span>
-      </label>
+    {#if isPower && generator}
+      <PowerCount bind:rate={form.rate} perGenerator={generator.megawatts} generator={generator.generator} />
     {:else}
-      {#each form.resources as row, i (i)}
-        <div class="row">
-          <select bind:value={row.item} aria-label="Resource">
-            {#each raws as r (r.id)}<option value={r.id}>{r.name}</option>{/each}
-          </select>
-          <input type="number" min="0" step="any" bind:value={row.amount} aria-label="Amount per minute" />
+      <div class="modes">
+        <button type="button" class:on={form.mode === "rate"} onclick={() => (form.mode = "rate")}>I want X / min</button>
+        <button type="button" class:on={form.mode === "resources"} onclick={() => (form.mode = "resources")}>I have resources</button>
+      </div>
+      {#if form.mode === "rate"}
+        <label class="row">
+          <input type="number" min="0" step="any" bind:value={form.rate} aria-label="Per minute" />
           <span class="muted">/min</span>
-          <button type="button" onclick={() => form.resources.splice(i, 1)} aria-label="Remove resource">✕</button>
-        </div>
-      {/each}
-      <button type="button" onclick={addResource}>+ Resource</button>
+        </label>
+      {:else}
+        {#each form.resources as row, i (i)}
+          <div class="row">
+            <select bind:value={row.item} aria-label="Resource">
+              {#each raws as r (r.id)}<option value={r.id}>{r.name}</option>{/each}
+            </select>
+            <input type="number" min="0" step="any" bind:value={row.amount} aria-label="Amount per minute" />
+            <span class="muted">/min</span>
+            <button type="button" onclick={() => form.resources.splice(i, 1)} aria-label="Remove resource">✕</button>
+          </div>
+        {/each}
+        <button type="button" onclick={addResource}>+ Resource</button>
+      {/if}
     {/if}
   </section>
 
@@ -77,6 +99,11 @@
       <label>Belt <select bind:value={form.beltTier}>{#each extractors.belts as b (b)}<option>{b}</option>{/each}</select></label>
       <label>Pipe <select bind:value={form.pipeTier}>{#each extractors.pipes as p (p)}<option>{p}</option>{/each}</select></label>
     </div>
+  </section>
+
+  <section>
+    <h3><span>4</span> From a depot <small class="muted">optional</small></h3>
+    <DepotRows bind:rows={form.depot} {targets} />
   </section>
 
   <button class="primary calculate" type="submit">Calculate</button>
@@ -113,14 +140,6 @@
     background: var(--orange);
     color: var(--bg);
     font-size: 12px;
-  }
-  .hint {
-    margin: 0;
-    font-size: 12px;
-    color: var(--muted);
-  }
-  .hint strong {
-    color: var(--orange);
   }
   .modes {
     display: flex;

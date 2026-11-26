@@ -1,4 +1,4 @@
-use super::planning::{calculate_request, transport_for};
+use super::planning::calculate_request;
 use crate::planner::{miner_capacity, NodeCounts};
 use crate::plans::{checklist, ManualProgress, Plan, PlanRequest, PlanStore, ProgressSource};
 use crate::state::{lock, AppState};
@@ -43,7 +43,7 @@ pub struct NodesChange {
 pub fn set_nodes(app: AppHandle, state: State<AppState>, change: NodesChange) -> Result<(), String> {
     let mut plan = lock(&state.plans).get_mut(&change.plan_id).ok_or("That plan no longer exists")?.clone();
     plan.set_nodes(change.item, change.nodes);
-    let steps = checklist(&calculate_request(&state, &plan.request)?.result, &plan.request.miner_tier);
+    let steps = checklist(&calculate_request(&state, &plan.request)?.result);
     plan.replace_steps(steps);
     change_plans(&app, |store| store.upsert(plan))
 }
@@ -53,7 +53,7 @@ pub fn set_nodes(app: AppHandle, state: State<AppState>, change: NodesChange) ->
 pub fn save_plan(app: AppHandle, state: State<AppState>, draft: PlanDraft) -> Result<Plan, String> {
     let PlanDraft { id, name, request } = draft;
     let calculation = calculate_request(&state, &request)?;
-    let steps = checklist(&calculation.result, &request.miner_tier);
+    let steps = checklist(&calculation.result);
     let id = id.unwrap_or_else(new_plan_id);
     let mut saved = None;
     change_plans(&app, |store| {
@@ -112,12 +112,28 @@ pub fn fill_miners(app: AppHandle, state: State<AppState>, change: FillChange) -
     let mut plan = lock(&state.plans).get_mut(&change.plan_id).ok_or("That plan no longer exists")?.clone();
     let calculation = calculate_request(&state, &plan.request)?;
     let raw = calculation.result.raw.iter().find(|r| r.item == change.item).ok_or("This plan does not mine that")?;
-    let belt = transport_for(&state, &plan.request)?.belt;
-    let rates = state.editable.extractors.node_rates(&plan.request.miner_tier, belt)?;
-    if !plan.request.grow_to_fill(raw, miner_capacity(raw, rates)) {
+    if !plan.request.grow_to_fill(raw, miner_capacity(raw)) {
         return Err("These miners can't grow: they run full, or another ore limits the plan".into());
     }
-    let steps = checklist(&calculate_request(&state, &plan.request)?.result, &plan.request.miner_tier);
+    let steps = checklist(&calculate_request(&state, &plan.request)?.result);
+    plan.replace_steps(steps);
+    change_plans(&app, |store| store.upsert(plan))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DepotChange {
+    plan_id: String,
+    item: String,
+    per_min: Option<f64>,
+}
+
+/// Sets what a depot sends of one item in a saved plan and recalculates it, keeping its progress.
+#[tauri::command]
+pub fn set_depot(app: AppHandle, state: State<AppState>, change: DepotChange) -> Result<(), String> {
+    let mut plan = lock(&state.plans).get_mut(&change.plan_id).ok_or("That plan no longer exists")?.clone();
+    plan.request.set_depot(change.item, change.per_min)?;
+    let steps = checklist(&calculate_request(&state, &plan.request)?.result);
     plan.replace_steps(steps);
     change_plans(&app, |store| store.upsert(plan))
 }

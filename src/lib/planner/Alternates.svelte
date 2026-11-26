@@ -45,7 +45,7 @@
 
 <style>
   .alts {
-    padding: 12px;
+    padding: 0;
   }
   .bar {
     display: flex;

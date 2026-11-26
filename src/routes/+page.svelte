@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Plan } from "$lib/api";
-  import Alternates from "$lib/planner/Alternates.svelte";
+  import Recipes from "$lib/planner/Recipes.svelte";
   import DataStatus from "$lib/planner/DataStatus.svelte";
   import PlansList from "$lib/planner/PlansList.svelte";
   import PlanTab from "$lib/planner/PlanTab.svelte";
@@ -9,7 +9,7 @@
   type Tab = "blueprints" | "alternates";
   const tabs: [Tab, string][] = [
     ["blueprints", "Blueprints"],
-    ["alternates", "My alternates"],
+    ["alternates", "My recipes"],
   ];
   type Screen = "list" | "form" | "blueprint";
 
@@ -53,7 +53,7 @@
     </nav>
     <main>
       {#if tab === "alternates"}
-        <Alternates />
+        <Recipes />
       {:else if screen === "form"}
         {#key editing?.id}
           <PlanTab {editing} onSaved={openBlueprint} />

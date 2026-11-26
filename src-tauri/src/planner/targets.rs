@@ -1,7 +1,7 @@
-use super::book::ranked_recipes;
+use super::book::standard_recipe;
 use crate::game_data::GameData;
 use serde::Serialize;
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
 
 /// An item you can plan for, with what one machine makes on its standard recipe.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -29,7 +29,7 @@ pub fn targets(data: &GameData) -> Vec<Target> {
 }
 
 fn target(data: &GameData, item: &str) -> Target {
-    let standard = ranked_recipes(data, &HashSet::new(), item).first().map(|recipe| {
+    let standard = standard_recipe(data, item).map(|recipe| {
         let made = recipe.products.iter().find(|p| p.item == item).map_or(0.0, |p| p.amount);
         StandardRate { building_name: data.building_name(&recipe.building), per_machine: recipe.rate_per_min(made) }
     });

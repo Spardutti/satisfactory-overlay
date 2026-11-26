@@ -1,9 +1,9 @@
-use crate::game_data::GameData;
-use crate::planner::{apply_nodes, fillable_ores, node_limit, Limit, PlanResult, Planner, Transport};
+use crate::game_data::{GameData, UnlockKind};
+use crate::planner::{apply_nodes, depot_cap, fillable_ores, mark_depot, node_limit, on_hand, Limit, PlanResult, Planner, Transport};
 use crate::plans::{checklist, ChecklistStep, Mode, PlanRequest};
 use crate::state::{lock, AppState};
 use serde::Serialize;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use tauri::State;
 
 #[derive(Serialize)]
@@ -21,8 +21,10 @@ pub struct Calculation {
     pub limit: Option<Limit>,
     /// the most target per minute the listed nodes allow, when an ore runs short
     pub node_limit: Option<f64>,
-    /// ores whose miners could run faster, so the blueprint offers ↑100%
+    /// ores whose miners could run faster, so the blueprint offers ↑100%; none when the depot caps the plan
     pub fillable: Vec<String>,
+    /// the most target per minute the depot allows, when it caps the plan
+    pub depot_limit: Option<f64>,
     /// build cards, in build order
     pub cards: Vec<ChecklistStep>,
     /// item id → recipes the user may pick for that step
@@ -35,28 +37,50 @@ pub fn calculate(state: State<AppState>, request: PlanRequest) -> Result<Calcula
 }
 
 pub fn calculate_request(state: &AppState, request: &PlanRequest) -> Result<Calculation, String> {
+    if let Some(error) = request.depot_error() {
+        return Err(error);
+    }
     let extractors = &state.editable.extractors;
-    let miner_rate = extractors.miner_rate(&request.miner_tier, "normal")?;
     let transport = transport_for(state, request)?;
-    let node_rates = extractors.node_rates(&request.miner_tier, transport.belt)?;
-    let alternates: HashSet<String> = lock(&state.config).enabled_alternates.iter().cloned().collect();
+    let book = extractors.book(&request.miner_tier, transport)?;
+    let (alternates, unlocked) = {
+        let config = lock(&state.config);
+        (config.enabled_alternates.clone(), config.unlocked.clone())
+    };
     let game = lock(&state.game);
     let data: &GameData = game.as_ref().ok_or("Game data is not loaded yet")?;
+    let owned = owned_recipes(data, &alternates, &unlocked)?;
+    let raw: HashSet<String> = state.editable.raw.iter().chain(request.depot.keys()).cloned().collect();
     let planner = Planner {
         data,
-        raw: &state.editable.raw,
+        raw: &raw,
         choices: &request.choices,
-        enabled_alternates: &alternates,
-        miner_rate,
+        enabled_alternates: &owned,
+        extractors: &book,
         transport,
     };
-    let (mut result, limit) = run_mode(&planner, request)?;
-    apply_nodes(&mut result, &request.nodes, node_rates);
+    let Planned { mut result, limit, depot_limit } = run_mode(&planner, request)?;
+    mark_depot(&mut result, &request.depot);
+    apply_nodes(&mut result, &request.nodes);
     let node_limit = node_limit(&result);
-    let fillable = fillable_ores(&result, node_rates);
+    let fillable = if depot_limit.is_some() { vec![] } else { fillable_ores(&result) };
     let options = result.steps.iter().map(|s| (s.item.clone(), options_for(&planner, &s.item))).collect();
-    let cards = checklist(&result, &request.miner_tier);
-    Ok(Calculation { result, limit, node_limit, fillable, options, cards })
+    let cards = checklist(&result);
+    Ok(Calculation { result, limit, node_limit, fillable, depot_limit, options, cards })
+}
+
+/// Recipes a plan may use: ticked alternates, plus what ticked milestones and MAM nodes give.
+fn owned_recipes(data: &GameData, alternates: &BTreeSet<String>, unlocked: &BTreeSet<String>) -> Result<HashSet<String>, String> {
+    let mut owned: HashSet<String> = alternates.iter().cloned().collect();
+    if data.unlocks.is_empty() {
+        return Ok(owned);
+    }
+    let picked_tier = data.unlocks.unlocks.iter().any(|u| u.kind == UnlockKind::Milestone && unlocked.contains(&u.id));
+    if !picked_tier {
+        return Err("Pick your tier in My recipes first.".into());
+    }
+    owned.extend(data.unlocks.owned_recipes(unlocked));
+    Ok(owned)
 }
 
 pub fn transport_for(state: &AppState, request: &PlanRequest) -> Result<Transport, String> {
@@ -67,12 +91,26 @@ pub fn transport_for(state: &AppState, request: &PlanRequest) -> Result<Transpor
     })
 }
 
-fn run_mode(planner: &Planner, request: &PlanRequest) -> Result<(PlanResult, Option<Limit>), String> {
+struct Planned {
+    result: PlanResult,
+    limit: Option<Limit>,
+    depot_limit: Option<f64>,
+}
+
+fn run_mode(planner: &Planner, request: &PlanRequest) -> Result<Planned, String> {
+    let target = &request.target;
     match &request.mode {
-        Mode::Rate { rate } => Ok((planner.plan_rate(&request.target, *rate)?, None)),
+        Mode::Rate { rate } => {
+            let result = planner.plan_rate(target, *rate)?;
+            match depot_cap(&result, &request.depot) {
+                Some(cap) => Ok(Planned { result: planner.plan_rate(target, cap)?, limit: None, depot_limit: Some(cap) }),
+                None => Ok(Planned { result, limit: None, depot_limit: None }),
+            }
+        }
         Mode::Resources { available } => {
-            let limit = planner.max_rate(&request.target, available)?;
-            Ok((planner.plan_rate(&request.target, limit.max_rate)?, Some(limit)))
+            let limit = planner.max_rate(target, &on_hand(available, &request.depot))?;
+            let result = planner.plan_rate(target, limit.max_rate)?;
+            Ok(Planned { result, limit: Some(limit), depot_limit: None })
         }
     }
 }

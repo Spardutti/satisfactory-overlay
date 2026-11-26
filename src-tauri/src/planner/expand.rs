@@ -80,17 +80,20 @@ impl Planner<'_> {
             .filter(|i| self.raw.contains(*i))
             .map(|item| {
                 let per_min = demand.get(item).copied().unwrap_or(0.0);
-                let minable = self.data.is_minable(item);
+                let extractor = self.extractors.for_item(self.data, item).cloned();
+                let each = extractor.as_ref().map(|e| e.rates.normal.min(e.rates.belt));
                 RawNeed {
                     item: item.clone(),
                     item_name: self.data.item_name(item),
                     per_min,
                     fluid: self.data.is_fluid(item),
-                    miners: minable.then(|| whole_machines(per_min / self.miner_output())),
-                    capped: minable && self.miner_rate > self.transport.belt,
-                    belts: self.raw_belts(item, per_min),
+                    miners: each.map(|each| whole_machines(per_min / each)),
+                    capped: extractor.as_ref().is_some_and(|e| e.rates.normal > e.rates.belt),
+                    belts: self.raw_belts(item, per_min, each),
                     goes_to: vec![],
                     nodes: None,
+                    from_depot: false,
+                    extractor,
                 }
             })
             .collect()

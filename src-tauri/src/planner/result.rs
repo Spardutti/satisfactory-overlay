@@ -1,3 +1,4 @@
+use super::extractor::Extractor;
 use super::nodes::NodeSupply;
 use super::transport::BeltGroup;
 use serde::Serialize;
@@ -38,6 +39,10 @@ pub struct RawNeed {
     pub belts: Vec<BeltGroup>,
     pub goes_to: Vec<Usage>,
     pub nodes: Option<NodeSupply>,
+    /// comes from the player's depot, so nothing is built for it
+    pub from_depot: bool,
+    /// the building that pulls it out of the ground; None when it is brought in
+    pub extractor: Option<Extractor>,
 }
 
 /// Where an item goes next: which product's machines take how much.

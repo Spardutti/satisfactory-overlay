@@ -47,7 +47,7 @@ pub fn input_buses(rows: &[Row], transport: Transport) -> Vec<Bus> {
     let mut buses = vec![];
     for (input, belt) in first.inputs.iter().enumerate() {
         let amounts: Vec<f64> = rows.iter().map(|r| r.inputs[input].per_min).collect();
-        for group in next_fit(&amounts, transport.capacity(belt.fluid)) {
+        for group in next_fit(&amounts, transport.line_capacity(&belt.item, belt.fluid)) {
             let taps = group.iter().map(|&row| Tap { row, input, per_min: amounts[row] }).collect();
             buses.push(bus(belt, taps));
         }
@@ -59,7 +59,7 @@ pub fn output_buses(rows: &[Row], transport: Transport) -> Vec<Bus> {
     let Some(first) = rows.first() else { return vec![] };
     let out = &first.output;
     let amounts: Vec<f64> = rows.iter().map(|r| r.output.per_min).collect();
-    next_fit(&amounts, transport.capacity(out.fluid))
+    next_fit(&amounts, transport.line_capacity(&out.item, out.fluid))
         .into_iter()
         .map(|group| {
             let taps = group.iter().map(|&row| Tap { row, input: 0, per_min: amounts[row] }).collect();

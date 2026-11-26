@@ -1,28 +1,29 @@
 mod bus;
 mod connect;
+mod counts;
 mod model;
 mod place;
 mod rows;
 
+pub use counts::{build_counts, BuildCount};
 pub use model::{BeltLine, Block, Connection, Layout, Metrics, Row};
 
 use crate::planner::{PlanResult, RawNeed, Step, Transport};
 use bus::{input_buses, output_buses};
 use connect::connect;
 use place::{block_size, place_columns, row_height, METRICS};
-use rows::{source_rows, step_rows, MinerSpeed};
-use std::collections::BTreeMap;
+use rows::{source_rows, step_rows};
+use std::collections::{BTreeMap, HashMap};
 
-/// `miner_rate` is what one miner makes on a normal node, before its belt holds it back.
-pub fn build_layout(result: &PlanResult, transport: Transport, miner_rate: f64) -> Layout {
-    let miner = MinerSpeed { rate: miner_rate, belt: transport.belt };
-    let raw = result.raw.iter().map(|raw| (0, source_block(raw, miner, transport)));
+pub fn build_layout(result: &PlanResult, transport: Transport) -> Layout {
+    let levels: HashMap<&str, u32> = result.steps.iter().map(|s| (s.item.as_str(), s.level)).collect();
+    let raw = result.raw.iter().map(|raw| (source_level(raw, &levels), source_block(raw, transport)));
     let made = result.steps.iter().map(|step| (step.level, step_block(step, transport)));
     let mut blocks: Vec<(u32, Block)> = raw.chain(made).collect();
     let (width, height) = place_columns(&mut blocks);
     let blocks: Vec<Block> = blocks.into_iter().map(|(_, b)| b).collect();
     let connections = connect(&blocks);
-    Layout { width, height, blocks, connections, metrics: METRICS }
+    Layout { width, height, blocks, connections, metrics: METRICS, counts: vec![] }
 }
 
 /// Moves blocks the user placed by hand; the others keep their automatic place.
@@ -34,16 +35,29 @@ pub fn apply_positions(layout: &mut Layout, positions: &BTreeMap<String, [f64; 2
     }
 }
 
+/// Ore starts the chain; a depot item sits where it would have been made.
+fn source_level(raw: &RawNeed, step_levels: &HashMap<&str, u32>) -> u32 {
+    if !raw.from_depot {
+        return 0;
+    }
+    let first_user = raw.goes_to.iter().filter_map(|u| step_levels.get(u.item.as_str())).min();
+    first_user.map_or(0, |level| level.saturating_sub(1))
+}
+
 struct Head<'a> {
     item: &'a str,
     title: &'a str,
     building: &'a str,
 }
 
-fn source_block(raw: &RawNeed, miner: MinerSpeed, transport: Transport) -> Block {
-    let building = if raw.miners.is_some() { "Miner" } else { "Bring in" };
+fn source_block(raw: &RawNeed, transport: Transport) -> Block {
+    let building = match (raw.from_depot, &raw.extractor) {
+        (true, _) => "Depot",
+        (false, Some(extractor)) => extractor.building.as_str(),
+        (false, None) => "Bring in",
+    };
     let head = Head { item: &raw.item, title: &raw.item_name, building };
-    block(head, source_rows(raw, miner), transport)
+    block(head, source_rows(raw), transport)
 }
 
 fn step_block(step: &Step, transport: Transport) -> Block {
@@ -68,5 +82,9 @@ fn block(head: Head, rows: Vec<Row>, transport: Transport) -> Block {
     }
 }
 
+#[cfg(test)]
+mod counts_tests;
+#[cfg(test)]
+mod level_tests;
 #[cfg(test)]
 mod tests;

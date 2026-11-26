@@ -24,21 +24,16 @@ impl Planner<'_> {
             item_name: self.data.item_name(item),
             per_min: per_machine * machines_exact,
             fluid,
-            belts: belt_groups(per_machine, machines_exact, self.transport.capacity(fluid)),
+            belts: belt_groups(per_machine, machines_exact, self.transport.line_capacity(item, fluid)),
         }
     }
 
-    /// What one miner really delivers: its rate, capped by the belt it fills.
-    pub(super) fn miner_output(&self) -> f64 {
-        self.miner_rate.min(self.transport.belt)
-    }
-
-    /// Miners grouped per output belt; fluids and gathered items just fill lines.
-    pub(super) fn raw_belts(&self, item: &str, per_min: f64) -> Vec<BeltGroup> {
+    /// Extractors grouped per output line; `each` is what one really delivers, None when brought in.
+    pub(super) fn raw_belts(&self, item: &str, per_min: f64, each: Option<f64>) -> Vec<BeltGroup> {
         let capacity = self.transport.capacity(self.data.is_fluid(item));
-        match self.data.is_minable(item) {
-            true => belt_groups(self.miner_output(), per_min / self.miner_output(), capacity),
-            false => line_groups(per_min, capacity),
+        match each {
+            Some(each) => belt_groups(each, per_min / each, capacity),
+            None => line_groups(per_min, capacity),
         }
     }
 }

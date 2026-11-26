@@ -3,7 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 export type Named = { id: string; name: string };
 export type Target = Named & { standard: { buildingName: string; perMachine: number } | null };
 export type DataSummary = { path: string; items: number; recipes: number; warnings: string[] };
+export type PowerOption = { recipeId: string; generator: string; fuel: string; megawatts: number };
 export type Alternate = { id: string; name: string; makes: string; enabled: boolean };
+export type UnlockKind = "milestone" | "mam" | "alternate";
+export type Unlock = { id: string; name: string; kind: UnlockKind; tier: number; tree: string; makes: string[]; ticked: boolean };
 export type ExtractorOptions = { tiers: string[]; belts: string[]; pipes: string[] };
 export type BeltGroup = { machines: number; perMin: number; over: boolean };
 export type Flow = { item: string; itemName: string; perMin: number; fluid: boolean; belts: BeltGroup[] };
@@ -19,6 +22,8 @@ export type PlanRequest = {
   pipeTier: string;
   choices: Record<string, string>;
   nodes: Record<string, NodeCounts>;
+  /** items already made elsewhere: item → per minute on hand */
+  depot?: Record<string, number>;
 };
 
 export type Step = {
@@ -47,7 +52,12 @@ export type RawNeed = {
   belts: BeltGroup[];
   goesTo: Usage[];
   nodes: NodeSupply | null;
+  fromDepot: boolean;
+  /** the building that pulls it out of the ground; null when it is brought in */
+  extractor: Extractor | null;
 };
+export type NodeRates = { pure: number; normal: number; impure: number; belt: number };
+export type Extractor = { building: string; rates: NodeRates; purity: boolean };
 export type NodeCounts = { pure: number; normal: number; impure: number };
 export type NodeDraw = { purity: string; perMin: number; clock: number };
 export type NodeSupply = { draws: NodeDraw[]; spare: NodeCounts; short: number };
@@ -63,6 +73,8 @@ export type Calculation = {
   nodeLimit: number | null;
   /** ores whose miners could run faster */
   fillable: string[];
+  /** the most target per minute the depot allows, when it caps the plan */
+  depotLimit: number | null;
   options: Record<string, RecipeOption[]>;
   cards: ChecklistStep[];
 };
@@ -113,23 +125,38 @@ export type Metrics = {
   header: number;
   padding: number;
 };
-export type Layout = { width: number; height: number; blocks: Block[]; connections: Connection[]; metrics: Metrics };
+export type BuildCount = { name: string; count: number };
+export type Layout = {
+  width: number;
+  height: number;
+  blocks: Block[];
+  connections: Connection[];
+  metrics: Metrics;
+  counts: BuildCount[];
+};
 
 export const PLANS_CHANGED = "plans-changed";
+/** The made-up item generators make; its rate is megawatts. */
+export const POWER = "Power";
 
 export const api = {
   loadGameData: () => invoke<DataSummary | null>("load_game_data"),
   setDocsPath: (path: string) => invoke<DataSummary>("set_docs_path", { path }),
   listTargets: () => invoke<Target[]>("list_targets"),
+  listPowerOptions: () => invoke<PowerOption[]>("list_power_options"),
   listRawResources: () => invoke<Named[]>("list_raw_resources"),
   listAlternates: () => invoke<Alternate[]>("list_alternates"),
   setAlternate: (id: string, enabled: boolean) => invoke<void>("set_alternate", { id, enabled }),
+  listUnlocks: () => invoke<Unlock[]>("list_unlocks"),
+  setUnlock: (id: string, ticked: boolean) => invoke<void>("set_unlock", { id, ticked }),
+  setTier: (tier: number) => invoke<void>("set_tier", { tier }),
   extractorOptions: () => invoke<ExtractorOptions>("extractor_options"),
   calculate: (request: PlanRequest) => invoke<Calculation>("calculate", { request }),
   planLayout: (planId: string) => invoke<Layout>("plan_layout", { planId }),
   moveBlock: (change: { planId: string; item: string; x: number; y: number }) => invoke<void>("move_block", { change }),
   resetLayout: (planId: string) => invoke<void>("reset_layout", { planId }),
   setNodes: (change: { planId: string; item: string; nodes: NodeCounts }) => invoke<void>("set_nodes", { change }),
+  setDepot: (change: { planId: string; item: string; perMin: number | null }) => invoke<void>("set_depot", { change }),
   fillMiners: (change: { planId: string; item: string }) => invoke<void>("fill_miners", { change }),
   listPlans: () => invoke<PlanStore>("list_plans"),
   savePlan: (draft: { id: string | null; name: string; request: PlanRequest }) =>

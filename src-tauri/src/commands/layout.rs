@@ -1,6 +1,6 @@
 use super::planning::{calculate_request, transport_for};
 use super::plans::change_plans;
-use crate::layout::{apply_positions, build_layout, Layout};
+use crate::layout::{apply_positions, build_counts, build_layout, Layout};
 use crate::state::{lock, AppState};
 use serde::Deserialize;
 use tauri::{AppHandle, State};
@@ -25,9 +25,9 @@ pub fn plan_layout(state: State<AppState>, plan_id: String) -> Result<Layout, St
         .ok_or("That plan no longer exists")?;
     let calculation = calculate_request(&state, &plan.request)?;
     let transport = transport_for(&state, &plan.request)?;
-    let miner_rate = state.editable.extractors.miner_rate(&plan.request.miner_tier, "normal")?;
-    let mut layout = build_layout(&calculation.result, transport, miner_rate);
+    let mut layout = build_layout(&calculation.result, transport);
     apply_positions(&mut layout, &plan.positions);
+    layout.counts = build_counts(&layout);
     Ok(layout)
 }
 

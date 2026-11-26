@@ -1,9 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { listen } from "@tauri-apps/api/event";
-  import { api, PLANS_CHANGED, type Calculation, type Layout, type NodeCounts, type Plan, type PlanStore } from "$lib/api";
+  import { api, fmt, PLANS_CHANGED, type Calculation, type Layout, type NodeCounts, type Plan, type PlanStore } from "$lib/api";
   import NodesPanel from "$lib/planner/NodesPanel.svelte";
   import Blueprint from "./Blueprint.svelte";
+  import CountsPanel from "./CountsPanel.svelte";
+  import DepotEditor from "./DepotEditor.svelte";
 
   let { planId = $bindable(), onEdit }: { planId: string | null; onEdit: (plan: Plan) => void } = $props();
 
@@ -11,9 +13,18 @@
   let layout = $state<Layout | null>(null);
   let error = $state("");
   let showNodes = $state(false);
+  let showCounts = $state(false);
+  let depotItem = $state<string | null>(null);
+  let depotAt = $state({ x: 0, y: 0 });
+  /** Width of the depot box, so it never opens past the window's right edge. */
+  const DEPOT_BOX = 340;
   let calc = $state<Calculation | null>(null);
   const plan = $derived(store.plans.find((p) => p.id === planId) ?? null);
   const sources = $derived(calc?.fillable ?? []);
+  const depotable = $derived(
+    calc ? [...calc.result.steps.map((s) => s.item), ...calc.result.raw.filter((r) => r.fromDepot).map((r) => r.item)].filter((i) => i !== calc!.result.target) : [],
+  );
+  const depotName = $derived(layout?.blocks.find((b) => b.item === depotItem)?.title ?? "");
 
   onMount(() => {
     refresh().then(load);
@@ -63,10 +74,11 @@
     if (planId) api.moveBlock({ planId, item, x, y }).catch((e) => (error = String(e)));
   }
 
-  async function setNodes(item: string, nodes: NodeCounts) {
+  /** Saves a change to the plan, then redraws without clearing the view. */
+  async function changePlan(save: (planId: string) => Promise<void>) {
     if (!planId) return;
     try {
-      await api.setNodes({ planId, item, nodes });
+      await save(planId);
       await refresh();
       await fetchPlan();
     } catch (e) {
@@ -74,15 +86,19 @@
     }
   }
 
-  async function fill(item: string) {
-    if (!planId) return;
-    try {
-      await api.fillMiners({ planId, item });
-      await refresh();
-      await fetchPlan();
-    } catch (e) {
-      error = String(e);
-    }
+  const setNodes = (item: string, nodes: NodeCounts) => changePlan((planId) => api.setNodes({ planId, item, nodes }));
+  const fill = (item: string) => changePlan((planId) => api.fillMiners({ planId, item }));
+
+  function openDepot(item: string, at: { x: number; y: number }) {
+    depotItem = item;
+    depotAt = { x: Math.min(at.x + 8, window.innerWidth - DEPOT_BOX - 8), y: at.y + 12 };
+  }
+
+  async function setDepot(perMin: number | null) {
+    const item = depotItem;
+    if (!item) return;
+    depotItem = null;
+    await changePlan((planId) => api.setDepot({ planId, item, perMin }));
   }
 
   async function resetLayout() {
@@ -110,15 +126,29 @@
     <button onclick={resetLayout} disabled={!planId}>Reset layout</button>
     <button onclick={clearBuilt} disabled={!planId}>Untick all</button>
     <button onclick={() => (showNodes = !showNodes)} disabled={!calc} class:primary={showNodes}>Nodes</button>
+    <button onclick={() => (showCounts = !showCounts)} disabled={!layout} class:primary={showCounts}>Buildings</button>
+    {#if calc?.depotLimit != null}
+      <span class="warn">Your depot allows {fmt(calc.depotLimit)} /min of {calc.result.targetName}.</span>
+    {/if}
     <span class="muted">Scroll to zoom · drag to move · click a machine to tick it built</span>
     {#if error}<span class="error">{error}</span>{/if}
   </div>
+  {#if depotItem && plan}
+    <div class="float" style:left="{depotAt.x}px" style:top="{depotAt.y}px" style:width="{DEPOT_BOX}px">
+      {#key depotItem}
+        <DepotEditor itemName={depotName} perMin={plan.request.depot?.[depotItem] ?? null} onSave={setDepot} onClose={() => (depotItem = null)} />
+      {/key}
+    </div>
+  {/if}
+  {#if showCounts && layout}
+    <div class="pad"><CountsPanel counts={layout.counts} /></div>
+  {/if}
   {#if showNodes && calc && plan}
     <div class="pad"><NodesPanel {calc} nodes={plan.request.nodes} onChange={setNodes} /></div>
   {/if}
   {#if layout}
     {#key planId}
-      <Blueprint bind:layout built={plan?.built ?? {}} {sources} onMoved={saveMove} onToggle={toggleBuilt} onFill={fill} />
+      <Blueprint bind:layout built={plan?.built ?? {}} {sources} onMoved={saveMove} onToggle={toggleBuilt} onFill={fill} {depotable} onDepot={openDepot} />
     {/key}
   {:else if !store.plans.length}
     <p class="muted pad">No blueprints yet.</p>
@@ -143,5 +173,13 @@
   }
   .pad {
     padding: 12px;
+  }
+  .float {
+    position: fixed;
+    z-index: 10;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  }
+  .warn {
+    color: var(--orange);
   }
 </style>
