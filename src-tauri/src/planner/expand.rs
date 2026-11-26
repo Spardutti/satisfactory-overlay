@@ -1,3 +1,4 @@
+use super::flows::link_destinations;
 use super::result::{last_machine_pct, whole_machines, PlanResult, RawNeed, Step, Surplus};
 use super::walk::Walk;
 use super::Planner;
@@ -28,11 +29,13 @@ impl Planner<'_> {
         let levels = levels(&walk);
         flow.steps.sort_by_key(|s| levels[&s.item]);
         flow.steps.iter_mut().for_each(|s| s.level = levels[&s.item]);
+        let mut raw = self.raw_needs(&walk.order, &flow.demand);
+        link_destinations(&mut flow.steps, &mut raw);
         Ok(PlanResult {
             target: target.to_string(),
             target_name: self.data.item_name(target),
             rate,
-            raw: self.raw_needs(&walk.order, &flow.demand),
+            raw,
             steps: flow.steps,
             surplus: self.surplus_list(flow.surplus),
         })
@@ -41,7 +44,8 @@ impl Planner<'_> {
     fn produce(&self, item: &str, recipe: &Recipe, flow: &mut Flow) {
         let needed = flow.demand.get(item).copied().unwrap_or(0.0);
         let made = recipe.products.iter().find(|p| p.item == item).map_or(0.0, |p| p.amount);
-        let machines_exact = needed / recipe.rate_per_min(made);
+        let per_machine = recipe.rate_per_min(made);
+        let machines_exact = needed / per_machine;
         for input in &recipe.ingredients {
             *flow.demand.entry(input.item.clone()).or_default() +=
                 machines_exact * recipe.rate_per_min(input.amount);
@@ -51,6 +55,7 @@ impl Planner<'_> {
                 machines_exact * recipe.rate_per_min(extra.amount);
         }
         let machines = whole_machines(machines_exact);
+        let (output, inputs) = self.step_flows(item, recipe, machines_exact);
         flow.steps.push(Step {
             item: item.to_string(),
             item_name: self.data.item_name(item),
@@ -62,6 +67,10 @@ impl Planner<'_> {
             last_machine_pct: last_machine_pct(machines_exact, machines),
             output_per_min: needed,
             level: 0,
+            per_machine,
+            inputs,
+            output,
+            goes_to: vec![],
         });
     }
 
@@ -71,15 +80,17 @@ impl Planner<'_> {
             .filter(|i| self.raw.contains(*i))
             .map(|item| {
                 let per_min = demand.get(item).copied().unwrap_or(0.0);
+                let minable = self.data.is_minable(item);
                 RawNeed {
                     item: item.clone(),
                     item_name: self.data.item_name(item),
                     per_min,
                     fluid: self.data.is_fluid(item),
-                    miners: self
-                        .data
-                        .is_minable(item)
-                        .then(|| whole_machines(per_min / self.miner_rate)),
+                    miners: minable.then(|| whole_machines(per_min / self.miner_output())),
+                    capped: minable && self.miner_rate > self.transport.belt,
+                    belts: self.raw_belts(item, per_min),
+                    goes_to: vec![],
+                    nodes: None,
                 }
             })
             .collect()

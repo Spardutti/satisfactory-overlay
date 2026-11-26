@@ -1,17 +1,20 @@
 use super::*;
 use crate::game_data::{fixture, ItemAmount, Recipe};
 
+pub(super) const MK1: Transport = Transport { belt: 60.0, pipe: 300.0 };
+
 pub(super) struct Setup {
     data: GameData,
     raw: HashSet<String>,
     pub(super) choices: HashMap<String, String>,
-    alternates: HashSet<String>,
-    miner_rate: f64,
+    pub(super) alternates: HashSet<String>,
+    pub(super) miner_rate: f64,
+    pub(super) transport: Transport,
 }
 
 pub(super) fn setup(data: GameData) -> Setup {
     let raw = ["Desc_OreIron_C", "Desc_Stone_C", "Desc_Water_C", "Desc_Leaves_C"].map(String::from).into();
-    Setup { data, raw, choices: HashMap::new(), alternates: HashSet::new(), miner_rate: 60.0 }
+    Setup { data, raw, choices: HashMap::new(), alternates: HashSet::new(), miner_rate: 60.0, transport: MK1 }
 }
 
 impl Setup {
@@ -22,6 +25,7 @@ impl Setup {
             choices: &self.choices,
             enabled_alternates: &self.alternates,
             miner_rate: self.miner_rate,
+            transport: self.transport,
         }
     }
 }

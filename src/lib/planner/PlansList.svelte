@@ -3,9 +3,10 @@
   import { onMount } from "svelte";
   import { api, PLANS_CHANGED, progress, type Plan, type PlanStore } from "$lib/api";
 
-  let { onEdit }: { onEdit: (plan: Plan) => void } = $props();
+  let { onNew, onEdit, onOpen }: { onNew: () => void; onEdit: (plan: Plan) => void; onOpen: (plan: Plan) => void } =
+    $props();
 
-  let store = $state<PlanStore>({ active: null, plans: [] });
+  let store = $state<PlanStore>({ plans: [] });
 
   async function refresh() {
     store = await api.listPlans();
@@ -17,33 +18,45 @@
     return () => unlisten.then((stop) => stop());
   });
 
+  /** A click on the row opens it; its own buttons do their own thing. */
+  function openRow(e: Event, plan: Plan) {
+    if (!(e.target as Element).closest("button")) onOpen(plan);
+  }
+
   function remove(plan: Plan) {
     if (confirm(`Delete “${plan.name}”?`)) api.deletePlan(plan.id);
   }
 </script>
 
 <div class="plans">
+  <button class="primary" onclick={onNew}>New blueprint</button>
   {#if !store.plans.length}
-    <p class="muted">No plans yet. Calculate one and press “Save as plan”.</p>
+    <p class="muted">No blueprints yet. Press “New blueprint” to make one.</p>
   {/if}
   {#each store.plans as plan (plan.id)}
     {@const p = progress(plan)}
-    <div class="plan" class:active={plan.id === store.active}>
-      <label>
-        <input type="radio" checked={plan.id === store.active} onchange={() => api.setActivePlan(plan.id)} />
-        {plan.name}
-      </label>
-      <span class="muted">{p.built} / {p.total} machines</span>
-      <button onclick={() => onEdit(plan)}>Edit</button>
+    <div
+      class="plan"
+      role="button"
+      tabindex="0"
+      onclick={(e) => openRow(e, plan)}
+      onkeydown={(e) => e.key === "Enter" && openRow(e, plan)}
+    >
+      <span>{plan.name}</span>
+      <span class="muted">{p.built} / {p.total} machines built</span>
+      <button onclick={() => onOpen(plan)}>Open</button>
+      <button onclick={() => onEdit(plan)}>Edit numbers</button>
       <button onclick={() => remove(plan)}>Delete</button>
     </div>
   {/each}
-  <p class="muted">The active plan is the one the overlay shows.</p>
 </div>
 
 <style>
   .plans {
     padding: 12px;
+  }
+  .plans > .primary {
+    margin-bottom: 8px;
   }
   .plan {
     display: flex;
@@ -51,11 +64,12 @@
     align-items: center;
     padding: 6px 8px;
     border-bottom: 1px solid var(--line);
+    cursor: pointer;
   }
-  .plan label {
+  .plan:hover {
+    background: var(--panel-2);
+  }
+  .plan > span:first-child {
     flex: 1;
-  }
-  .active {
-    border-left: 3px solid var(--orange);
   }
 </style>

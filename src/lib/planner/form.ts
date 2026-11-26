@@ -1,4 +1,4 @@
-import type { Named, Plan, PlanRequest } from "$lib/api";
+import type { Named, NodeCounts, Plan, PlanRequest } from "$lib/api";
 
 export type ResourceRow = { item: string; amount: number };
 
@@ -8,8 +8,10 @@ export type FormState = {
   rate: number;
   resources: ResourceRow[];
   minerTier: string;
-  purity: string;
+  beltTier: string;
+  pipeTier: string;
   choices: Record<string, string>;
+  nodes: Record<string, NodeCounts>;
 };
 
 export function emptyForm(): FormState {
@@ -19,9 +21,19 @@ export function emptyForm(): FormState {
     rate: 60,
     resources: [{ item: "Desc_OreIron_C", amount: 60 }],
     minerTier: "Mk1",
-    purity: "normal",
+    beltTier: "Mk1",
+    pipeTier: "Mk1",
     choices: {},
+    nodes: {},
   };
+}
+
+/** What a new plan is called unless the player names it, e.g. "AI Expansion Server - 60". */
+export function defaultName(form: FormState): string {
+  const target = form.targetName.trim();
+  if (!target) return "Plan name";
+  if (form.mode !== "rate" || !isAmount(form.rate)) return target;
+  return `${target} - ${Number(form.rate.toFixed(2))}`;
 }
 
 /** The request for the form, or an error message when the target is not a known item. */
@@ -35,7 +47,8 @@ export function toRequest(form: FormState, targets: Named[]): PlanRequest | stri
     form.mode === "rate"
       ? { kind: "rate" as const, rate: form.rate }
       : { kind: "resources" as const, available: totalPerItem(form.resources) };
-  return { target: target.id, mode, minerTier: form.minerTier, purity: form.purity, choices: form.choices };
+  const { minerTier, beltTier, pipeTier, choices, nodes } = form;
+  return { target: target.id, mode, minerTier, beltTier, pipeTier, choices, nodes };
 }
 
 function isAmount(value: number | null): boolean {
@@ -52,7 +65,9 @@ function totalPerItem(rows: ResourceRow[]): Record<string, number> {
 export function fromPlan(plan: Plan, targets: Named[]): FormState {
   const { request } = plan;
   const targetName = targets.find((t) => t.id === request.target)?.name ?? request.target;
-  const base = { ...emptyForm(), targetName, minerTier: request.minerTier, purity: request.purity, choices: { ...request.choices } };
+  const { minerTier, beltTier, pipeTier } = request;
+  const choices = { ...request.choices };
+  const base = { ...emptyForm(), targetName, minerTier, beltTier, pipeTier, choices, nodes: { ...request.nodes } };
   if (request.mode.kind === "rate") return { ...base, mode: "rate", rate: request.mode.rate };
   const resources = Object.entries(request.mode.available).map(([item, amount]) => ({ item, amount }));
   return { ...base, mode: "resources", resources };

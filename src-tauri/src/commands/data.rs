@@ -1,7 +1,7 @@
 use crate::game_data::{find_docs_file, GameData, GameDocsSource, RecipeSource};
+use crate::planner::{targets, Target};
 use crate::state::{lock, AppState};
 use serde::Serialize;
-use std::collections::BTreeSet;
 use std::path::PathBuf;
 use tauri::State;
 
@@ -64,14 +64,9 @@ pub fn with_game<T>(state: &AppState, f: impl FnOnce(&GameData) -> T) -> Result<
     lock(&state.game).as_ref().map(f).ok_or("Game data is not loaded yet".into())
 }
 
-/// Every item some factory recipe makes, by name.
 #[tauri::command]
-pub fn list_targets(state: State<AppState>) -> Result<Vec<Named>, String> {
-    with_game(&state, |data| {
-        let ids: BTreeSet<&str> =
-            data.recipes.iter().flat_map(|r| r.products.iter().map(|p| p.item.as_str())).collect();
-        sorted_by_name(ids.into_iter().map(|id| Named { id: id.into(), name: data.item_name(id) }))
-    })
+pub fn list_targets(state: State<AppState>) -> Result<Vec<Target>, String> {
+    with_game(&state, targets)
 }
 
 #[tauri::command]
@@ -115,15 +110,17 @@ pub fn set_alternate(state: State<AppState>, id: String, enabled: bool) -> Resul
 #[serde(rename_all = "camelCase")]
 pub struct ExtractorOptions {
     tiers: Vec<String>,
-    purities: Vec<String>,
+    belts: Vec<String>,
+    pipes: Vec<String>,
 }
 
 #[tauri::command]
 pub fn extractor_options(state: State<AppState>) -> ExtractorOptions {
-    let extractors = &state.editable.extractors;
+    let (extractors, logistics) = (&state.editable.extractors, &state.editable.logistics);
     ExtractorOptions {
         tiers: extractors.miners.keys().cloned().collect(),
-        purities: extractors.purity.keys().cloned().collect(),
+        belts: logistics.belts.keys().cloned().collect(),
+        pipes: logistics.pipes.keys().cloned().collect(),
     }
 }
 
