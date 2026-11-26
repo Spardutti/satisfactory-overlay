@@ -13,9 +13,9 @@
   const NONE: NodeCounts = { pure: 0, normal: 0, impure: 0 };
   const mined = $derived(calc.result.raw.filter((r) => r.miners !== null));
 
-  function change(item: string, purity: keyof NodeCounts, value: string) {
-    const count = Math.max(0, Math.floor(Number(value) || 0));
-    onChange(item, { ...(nodes[item] ?? NONE), [purity]: count });
+  function step(item: string, purity: keyof NodeCounts, by: number) {
+    const counts = nodes[item] ?? NONE;
+    onChange(item, { ...counts, [purity]: Math.max(0, counts[purity] + by) });
   }
 
   function spareText(spare: NodeCounts): string {
@@ -33,20 +33,32 @@
 
 {#if mined.length}
   <div class="nodes">
-    <h3>Your nodes <span class="muted">optional — leave empty to assume normal nodes</span></h3>
-    {#each mined as raw (raw.item)}
-      {@const counts = nodes[raw.item] ?? NONE}
-      <div class="ore">
-        <strong>{raw.itemName}</strong>
-        {#each PURITIES as purity (purity)}
-          <label>
-            {purity}
-            <input type="number" min="0" step="1" value={counts[purity]} onchange={(e) => change(raw.item, purity, e.currentTarget.value)} />
-          </label>
+    <h3>Your nodes <span class="muted">optional — leave at 0 to assume normal nodes</span></h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Ore</th>
+          {#each PURITIES as purity (purity)}<th class="purity">{purity}</th>{/each}
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each mined as raw (raw.item)}
+          {@const counts = nodes[raw.item] ?? NONE}
+          <tr>
+            <td class="ore">{raw.itemName}</td>
+            {#each PURITIES as purity (purity)}
+              <td class="stepper">
+                <button onclick={() => step(raw.item, purity, -1)} disabled={counts[purity] === 0} aria-label="One less {purity} {raw.itemName} node">−</button>
+                <span class:zero={counts[purity] === 0}>{counts[purity]}</span>
+                <button onclick={() => step(raw.item, purity, 1)} aria-label="One more {purity} {raw.itemName} node">+</button>
+              </td>
+            {/each}
+            <td class="muted" class:short={(raw.nodes?.short ?? 0) > 0}>{status(raw)}</td>
+          </tr>
         {/each}
-        <span class:short={(raw.nodes?.short ?? 0) > 0} class="muted">{status(raw)}</span>
-      </div>
-    {/each}
+      </tbody>
+    </table>
     {#if calc.nodeLimit !== null}
       <p class="short">Your nodes allow {fmt(calc.nodeLimit)} /min of {calc.result.targetName}.</p>
     {/if}
@@ -55,27 +67,44 @@
 
 <style>
   .nodes {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
+  }
+  table {
+    border-collapse: collapse;
+  }
+  th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--muted);
+    padding: 4px 10px;
+  }
+  .purity {
+    text-transform: capitalize;
+    text-align: center;
+  }
+  td {
+    padding: 4px 10px;
+    border-top: 1px solid var(--line);
   }
   .ore {
-    display: flex;
-    gap: 10px;
-    align-items: center;
+    font-weight: 600;
   }
-  .ore strong {
-    min-width: 110px;
+  .stepper {
+    white-space: nowrap;
+    text-align: center;
   }
-  label {
-    display: flex;
-    gap: 4px;
-    align-items: center;
+  .stepper span {
+    display: inline-block;
+    min-width: 22px;
+    text-align: center;
+  }
+  .stepper button {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+  }
+  .zero {
     color: var(--muted);
-  }
-  input {
-    width: 52px;
   }
   .short {
     color: var(--orange);
