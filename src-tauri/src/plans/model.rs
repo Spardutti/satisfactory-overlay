@@ -23,6 +23,9 @@ pub struct PlanRequest {
     pub choices: HashMap<String, String>,
     #[serde(default)]
     pub nodes: BTreeMap<String, NodeCounts>,
+    /// items the player already makes elsewhere: item → per minute on hand
+    #[serde(default)]
+    pub depot: BTreeMap<String, f64>,
 }
 
 impl PlanRequest {
@@ -31,6 +34,22 @@ impl PlanRequest {
             true => self.nodes.remove(&item),
             false => self.nodes.insert(item, counts),
         };
+    }
+}
+
+impl PlanRequest {
+    /// Sets what a depot sends of one item; None or 0 takes the depot away. Refuses negative or broken amounts.
+    pub fn set_depot(&mut self, item: String, per_min: Option<f64>) -> Result<(), String> {
+        match per_min {
+            None | Some(0.0) => {
+                self.depot.remove(&item);
+            }
+            Some(n) if n.is_finite() && n > 0.0 => {
+                self.depot.insert(item, n);
+            }
+            Some(_) => return Err("Enter an amount above 0".into()),
+        }
+        Ok(())
     }
 }
 

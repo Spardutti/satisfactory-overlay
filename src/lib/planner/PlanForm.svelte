@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fmt, type ExtractorOptions, type Named, type Target } from "$lib/api";
+  import DepotRows from "./DepotRows.svelte";
   import type { FormState } from "./form";
 
   let {
@@ -77,6 +78,11 @@
       <label>Belt <select bind:value={form.beltTier}>{#each extractors.belts as b (b)}<option>{b}</option>{/each}</select></label>
       <label>Pipe <select bind:value={form.pipeTier}>{#each extractors.pipes as p (p)}<option>{p}</option>{/each}</select></label>
     </div>
+  </section>
+
+  <section>
+    <h3><span>4</span> From a depot <small class="muted">optional</small></h3>
+    <DepotRows bind:rows={form.depot} {targets} />
   </section>
 
   <button class="primary calculate" type="submit">Calculate</button>

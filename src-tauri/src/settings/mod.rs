@@ -2,7 +2,7 @@ mod json_file;
 
 pub use json_file::{read_or_backup, write_json};
 
-use crate::planner::NodeRates;
+use crate::planner::{Extractor, ExtractorBook, NodeRates, Transport};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
@@ -16,12 +16,31 @@ const DEFAULT_LOGISTICS: &str = include_str!("../../../config/logistics.json");
 pub struct AppConfig {
     pub docs_path: Option<PathBuf>,
     pub enabled_alternates: BTreeSet<String>,
+    /// milestones and MAM research the player finished, by schematic id
+    pub unlocked: BTreeSet<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Extractors {
     pub miners: BTreeMap<String, f64>,
     pub purity: BTreeMap<String, f64>,
+    /// older user files lack this, so they get the built-in fluid extractors
+    #[serde(default = "default_fluids")]
+    pub fluids: BTreeMap<String, FluidExtractor>,
+}
+
+/// One fluid's extractor from extractors.json, e.g. Water → Water Extractor at 120 m³/min.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FluidExtractor {
+    pub building: String,
+    /// per minute on a normal node
+    pub rate: f64,
+    pub purity: bool,
+}
+
+fn default_fluids() -> BTreeMap<String, FluidExtractor> {
+    let built_in: serde_json::Value = serde_json::from_str(DEFAULT_EXTRACTORS).unwrap_or_default();
+    serde_json::from_value(built_in["fluids"].clone()).unwrap_or_default()
 }
 
 impl Extractors {
@@ -35,6 +54,19 @@ impl Extractors {
     }
 
     /// What one miner of `tier` makes on each purity, with the `belt` that carries it.
+    /// The extractors one plan uses: the miner of `tier`, and each fluid's, capped by its line.
+    pub fn book(&self, tier: &str, transport: Transport) -> Result<ExtractorBook, String> {
+        let miner = Extractor { building: format!("Miner {tier}"), rates: self.node_rates(tier, transport.belt)?, purity: true };
+        let fluids = self.fluids.iter().map(|(item, f)| (item.clone(), self.fluid_extractor(f, transport.pipe))).collect();
+        Ok(ExtractorBook { miner, fluids })
+    }
+
+    fn fluid_extractor(&self, fluid: &FluidExtractor, pipe: f64) -> Extractor {
+        let factor = |purity: &str| if fluid.purity { self.purity.get(purity).copied().unwrap_or(1.0) } else { 1.0 };
+        let rates = NodeRates { pure: fluid.rate * factor("pure"), normal: fluid.rate * factor("normal"), impure: fluid.rate * factor("impure"), belt: pipe };
+        Extractor { building: fluid.building.clone(), rates, purity: fluid.purity }
+    }
+
     pub fn node_rates(&self, tier: &str, belt: f64) -> Result<NodeRates, String> {
         let rate = |purity: &str| self.miner_rate(tier, purity);
         Ok(NodeRates { pure: rate("pure")?, normal: rate("normal")?, impure: rate("impure")?, belt })

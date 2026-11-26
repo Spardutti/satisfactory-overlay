@@ -48,6 +48,8 @@ fn ore(item: &str, per_min: f64) -> RawNeed {
         belts: vec![],
         goes_to: vec![],
         nodes: None,
+        from_depot: false,
+        extractor: None,
     }
 }
 
@@ -58,7 +60,8 @@ fn computers(raw: Vec<RawNeed>) -> PlanResult {
 #[test]
 fn apply_nodes_sets_one_miner_and_one_belt_per_used_node() {
     let mut result = computers(vec![ore("iron", 150.0)]);
-    apply_nodes(&mut result, &BTreeMap::from([("iron".to_string(), nodes(0, 3, 0))]), MK1);
+    equip(&mut result, MK1);
+    apply_nodes(&mut result, &BTreeMap::from([("iron".to_string(), nodes(0, 3, 0))]));
     let belts: Vec<f64> = result.raw[0].belts.iter().map(|b| b.per_min).collect();
     assert_eq!((result.raw[0].miners, belts), (Some(3), vec![60.0, 60.0, 30.0]));
 }
@@ -66,7 +69,8 @@ fn apply_nodes_sets_one_miner_and_one_belt_per_used_node() {
 #[test]
 fn apply_nodes_all_zero_counts_keep_the_normal_node_guess() {
     let mut result = computers(vec![ore("iron", 150.0)]);
-    apply_nodes(&mut result, &BTreeMap::from([("iron".to_string(), nodes(0, 0, 0))]), MK1);
+    equip(&mut result, MK1);
+    apply_nodes(&mut result, &BTreeMap::from([("iron".to_string(), nodes(0, 0, 0))]));
     assert_eq!((result.raw[0].miners, result.raw[0].nodes.is_none()), (Some(1), true));
 }
 
@@ -74,14 +78,16 @@ fn apply_nodes_all_zero_counts_keep_the_normal_node_guess() {
 fn node_limit_5_computers_with_iron_80_percent_covered_is_4() {
     let mut result = computers(vec![ore("iron", 300.0), ore("copper", 60.0)]);
     let listed = BTreeMap::from([("iron".to_string(), nodes(2, 0, 0)), ("copper".to_string(), nodes(0, 1, 0))]);
-    apply_nodes(&mut result, &listed, MK1);
+    equip(&mut result, MK1);
+    apply_nodes(&mut result, &listed);
     assert_eq!(node_limit(&result), Some(4.0));
 }
 
 #[test]
 fn node_limit_all_ores_covered_is_none() {
     let mut result = computers(vec![ore("iron", 240.0)]);
-    apply_nodes(&mut result, &BTreeMap::from([("iron".to_string(), nodes(2, 0, 0))]), MK1);
+    equip(&mut result, MK1);
+    apply_nodes(&mut result, &BTreeMap::from([("iron".to_string(), nodes(2, 0, 0))]));
     assert_eq!(node_limit(&result), None);
 }
 
@@ -102,13 +108,22 @@ fn draw_from_nodes_mk2_pure_on_mk1_belt_pulls_only_60() {
 #[test]
 fn apply_nodes_flags_capped_when_a_used_node_beats_the_belt() {
     let mut result = computers(vec![ore("iron", 60.0)]);
-    apply_nodes(&mut result, &BTreeMap::from([("iron".to_string(), nodes(1, 0, 0))]), MK2_ON_MK1);
+    equip(&mut result, MK2_ON_MK1);
+    apply_nodes(&mut result, &BTreeMap::from([("iron".to_string(), nodes(1, 0, 0))]));
     assert!(result.raw[0].capped);
 }
 
 #[test]
 fn apply_nodes_clears_capped_when_no_used_node_beats_the_belt() {
     let mut result = computers(vec![RawNeed { capped: true, ..ore("iron", 60.0) }]);
-    apply_nodes(&mut result, &BTreeMap::from([("iron".to_string(), nodes(0, 0, 1))]), MK2_ON_MK1);
+    equip(&mut result, MK2_ON_MK1);
+    apply_nodes(&mut result, &BTreeMap::from([("iron".to_string(), nodes(0, 0, 1))]));
     assert!(!result.raw[0].capped);
+}
+
+/// Gives every source a miner with these rates, as a plan would.
+fn equip(result: &mut PlanResult, rates: NodeRates) {
+    for raw in &mut result.raw {
+        raw.extractor = Some(crate::planner::Extractor { building: "Miner Mk1".into(), rates, purity: true });
+    }
 }

@@ -14,6 +14,8 @@
     onMoved,
     onToggle,
     onFill,
+    depotable,
+    onDepot,
   }: {
     layout: Layout;
     built: Record<string, number[]>;
@@ -22,6 +24,10 @@
     onMoved: (item: string, x: number, y: number) => void;
     onToggle: (item: string, row: number) => void;
     onFill: (item: string) => void;
+    /** items whose block may come from a depot instead */
+    depotable: string[];
+    /** `at` is where the click landed on screen, so the editor can open beside it */
+    onDepot: (item: string, at: { x: number; y: number }) => void;
   } = $props();
 
   let screen = $state<HTMLDivElement>();
@@ -51,6 +57,8 @@
     if (target.closest("button")) return;
     const fill = target.closest("[data-fill]")?.getAttribute("data-fill");
     if (fill) return onFill(fill);
+    const depot = target.closest("[data-depot]")?.getAttribute("data-depot");
+    if (depot) return onDepot(depot, { x: e.clientX, y: e.clientY });
     const item = target.closest("[data-block]")?.getAttribute("data-block");
     const block = layout.blocks.find((b) => b.item === item) ?? null;
     const row = target.closest("[data-row]")?.getAttribute("data-row");
@@ -97,7 +105,7 @@
         <text class="link-label" x={branch.label.x} y={branch.label.y} style:fill={itemColor(branch.item)}>{fmt(branch.perMin)}</text>
       {/each}
       {#each layout.blocks as block (block.item)}
-        <BlockView {block} metrics={layout.metrics} built={built[block.item] ?? []} fillable={sources.includes(block.item)} />
+        <BlockView {block} metrics={layout.metrics} built={built[block.item] ?? []} fillable={sources.includes(block.item)} depotable={depotable.includes(block.item)} />
       {/each}
     </g>
   </svg>

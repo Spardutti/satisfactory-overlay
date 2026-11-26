@@ -11,6 +11,7 @@ fn request(mode: Mode) -> PlanRequest {
         pipe_tier: "Mk1".into(),
         choices: HashMap::new(),
         nodes: Default::default(),
+        depot: Default::default(),
     }
 }
 
@@ -25,6 +26,8 @@ fn iron(per_min: f64) -> RawNeed {
         belts: vec![],
         goes_to: vec![],
         nodes: None,
+        from_depot: false,
+        extractor: None,
     }
 }
 

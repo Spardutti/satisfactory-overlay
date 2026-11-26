@@ -10,7 +10,7 @@ pub struct NodeCounts {
 }
 
 /// What one miner makes per minute on each purity, and what one belt carries away from it.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct NodeRates {
     pub pure: f64,
     pub normal: f64,
@@ -66,9 +66,10 @@ pub fn draw_from_nodes(need: f64, counts: NodeCounts, rates: NodeRates) -> NodeS
     NodeSupply { draws, spare, short: if left > EPS { left } else { 0.0 } }
 }
 
-/// Puts the player's nodes on each ore they listed, so its miners, belts and shortfall follow them.
-pub fn apply_nodes(result: &mut PlanResult, nodes: &BTreeMap<String, NodeCounts>, rates: NodeRates) {
-    for raw in result.raw.iter_mut().filter(|r| r.miners.is_some()) {
+/// Puts the player's nodes on each source they listed, so its extractors, lines and shortfall follow them.
+pub fn apply_nodes(result: &mut PlanResult, nodes: &BTreeMap<String, NodeCounts>) {
+    for raw in result.raw.iter_mut() {
+        let Some(rates) = raw.extractor.as_ref().filter(|e| e.purity).map(|e| e.rates) else { continue };
         let Some(&counts) = nodes.get(&raw.item).filter(|c| **c != NodeCounts::default()) else { continue };
         let supply = draw_from_nodes(raw.per_min, counts, rates);
         raw.miners = Some(supply.draws.len() as u32);

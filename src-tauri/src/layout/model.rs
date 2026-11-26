@@ -9,6 +9,8 @@ pub struct Layout {
     pub blocks: Vec<Block>,
     pub connections: Vec<Connection>,
     pub metrics: Metrics,
+    /// filled by the caller, which knows the miner tier
+    pub counts: Vec<super::BuildCount>,
 }
 
 /// Sizes the screen draws rows and machines with, so both sides agree.

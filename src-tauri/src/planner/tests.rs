@@ -4,17 +4,17 @@ use crate::game_data::{fixture, ItemAmount, Recipe};
 pub(super) const MK1: Transport = Transport { belt: 60.0, pipe: 300.0 };
 
 pub(super) struct Setup {
-    data: GameData,
+    pub(super) data: GameData,
     raw: HashSet<String>,
     pub(super) choices: HashMap<String, String>,
     pub(super) alternates: HashSet<String>,
-    pub(super) miner_rate: f64,
+    pub(super) extractors: ExtractorBook,
     pub(super) transport: Transport,
 }
 
 pub(super) fn setup(data: GameData) -> Setup {
     let raw = ["Desc_OreIron_C", "Desc_Stone_C", "Desc_Water_C", "Desc_Leaves_C"].map(String::from).into();
-    Setup { data, raw, choices: HashMap::new(), alternates: HashSet::new(), miner_rate: 60.0, transport: MK1 }
+    Setup { data, raw, choices: HashMap::new(), alternates: HashSet::new(), extractors: ExtractorBook::miner_only(60.0, MK1.belt), transport: MK1 }
 }
 
 impl Setup {
@@ -24,7 +24,7 @@ impl Setup {
             raw: &self.raw,
             choices: &self.choices,
             enabled_alternates: &self.alternates,
-            miner_rate: self.miner_rate,
+            extractors: &self.extractors,
             transport: self.transport,
         }
     }
@@ -88,7 +88,7 @@ fn plan_rate_120_screws_needs_30_iron_ore_and_one_mk1_miner() {
 #[test]
 fn plan_rate_one_ore_past_miner_rate_needs_a_second_miner() {
     let mut s = setup(fixture());
-    s.miner_rate = 29.0;
+    s.extractors = ExtractorBook::miner_only(29.0, MK1.belt);
     let result = s.planner().plan_rate("Desc_IronScrew_C", 120.0).unwrap();
     assert_eq!(result.raw[0].miners, Some(2));
 }

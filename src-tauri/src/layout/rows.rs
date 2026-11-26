@@ -16,15 +16,17 @@ pub fn step_rows(step: &Step, transport: Transport) -> Vec<Row> {
         .collect()
 }
 
-/// A miner's own rate on a normal node, and the belt that may hold it back.
+/// An extractor's own rate on a normal node, and the line that may hold it back.
 #[derive(Debug, Clone, Copy)]
-pub struct MinerSpeed {
-    pub rate: f64,
-    pub belt: f64,
+struct MinerSpeed {
+    rate: f64,
+    belt: f64,
 }
 
-/// One row per miner, or per line for fluids and gathered items.
-pub fn source_rows(raw: &RawNeed, miner: MinerSpeed) -> Vec<Row> {
+/// One row per extractor, or per line for items brought in.
+pub fn source_rows(raw: &RawNeed) -> Vec<Row> {
+    let rates = raw.extractor.as_ref().map(|e| e.rates);
+    let miner = MinerSpeed { rate: rates.map_or(1.0, |r| r.normal), belt: rates.map_or(1.0, |r| r.belt) };
     match &raw.nodes {
         Some(supply) => supply.draws.iter().map(|draw| node_row(raw, draw)).collect(),
         None => raw.belts.iter().flat_map(|group| group_rows(raw, group, miner)).collect(),

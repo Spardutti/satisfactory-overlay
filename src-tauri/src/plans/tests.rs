@@ -16,6 +16,7 @@ fn plan(id: &str, steps: Vec<ChecklistStep>) -> Plan {
         pipe_tier: "Mk1".into(),
         choices: HashMap::new(),
         nodes: Default::default(),
+        depot: Default::default(),
     };
     Plan { id: id.into(), name: id.into(), request, steps, positions: Default::default(), built: Default::default() }
 }
@@ -127,6 +128,39 @@ fn set_nodes_clears_the_ticks_of_that_ore() {
     p.toggle_built("Rod", 0);
     p.set_nodes("Desc_OreIron_C".into(), NodeCounts { pure: 1, normal: 0, impure: 0 });
     assert_eq!(p.built.keys().map(String::as_str).collect::<Vec<_>>(), vec!["Rod"]);
+}
+
+const RIP: &str = "Desc_IronPlateReinforced_C";
+
+#[test]
+fn set_depot_2_5_rip_stores_it() {
+    let mut p = plan("a", vec![]);
+    p.request.set_depot(RIP.into(), Some(2.5)).unwrap();
+    assert_eq!(p.request.depot.get(RIP), Some(&2.5));
+}
+
+#[test]
+fn set_depot_none_takes_it_away() {
+    let mut p = plan("a", vec![]);
+    p.request.set_depot(RIP.into(), Some(2.5)).unwrap();
+    p.request.set_depot(RIP.into(), None).unwrap();
+    assert!(p.request.depot.is_empty());
+}
+
+#[test]
+fn set_depot_zero_takes_it_away() {
+    let mut p = plan("a", vec![]);
+    p.request.set_depot(RIP.into(), Some(2.5)).unwrap();
+    p.request.set_depot(RIP.into(), Some(0.0)).unwrap();
+    assert!(p.request.depot.is_empty());
+}
+
+#[test]
+fn set_depot_negative_is_refused() {
+    let mut p = plan("a", vec![]);
+    p.request.set_depot(RIP.into(), Some(2.5)).unwrap();
+    let refused = p.request.set_depot(RIP.into(), Some(-1.0));
+    assert_eq!((refused, p.request.depot.get(RIP)), (Err("Enter an amount above 0".into()), Some(&2.5)));
 }
 
 #[test]
