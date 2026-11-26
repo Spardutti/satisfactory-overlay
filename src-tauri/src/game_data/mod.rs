@@ -1,12 +1,14 @@
 mod docs;
 mod encoding;
 mod locate;
+mod machine_power;
 mod model;
 mod power;
 mod unlocks;
 mod unreal;
 
 pub use locate::find_docs_file;
+pub use machine_power::clocked_mw;
 pub use model::{GameData, Item, ItemAmount, Recipe};
 pub use power::{power_options, PowerOption, POWER};
 pub use unlocks::{Unlock, UnlockBook, UnlockKind};
@@ -39,3 +41,5 @@ pub fn fixture() -> GameData {
 mod unlocks_tests;
 #[cfg(test)]
 mod power_tests;
+#[cfg(test)]
+mod machine_power_tests;

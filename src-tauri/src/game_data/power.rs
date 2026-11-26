@@ -56,11 +56,11 @@ pub fn power_recipes(generator_classes: &[&Value], energy: &HashMap<String, f64>
     recipes
 }
 
-fn text<'a>(class: &'a Value, key: &str) -> Option<&'a str> {
+pub(super) fn text<'a>(class: &'a Value, key: &str) -> Option<&'a str> {
     class.get(key)?.as_str()
 }
 
-fn number(class: &Value, key: &str) -> Option<f64> {
+pub(super) fn number(class: &Value, key: &str) -> Option<f64> {
     text(class, key)?.parse().ok()
 }
 

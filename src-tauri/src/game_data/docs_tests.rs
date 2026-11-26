@@ -66,3 +66,9 @@ fn parse_docs_reads_item_form() {
 fn parse_docs_non_array_root_is_an_error() {
     assert!(parse_docs("{}").unwrap_err().starts_with("Docs file is not a JSON array"));
 }
+
+#[test]
+fn parse_docs_reads_factory_power_draw() {
+    let data = fixture();
+    assert_eq!((data.full_clock_mw("Smelter"), data.full_clock_mw("Constructor")), (4.0, 0.0));
+}

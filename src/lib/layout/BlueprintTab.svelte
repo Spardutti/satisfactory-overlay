@@ -122,6 +122,7 @@
         <b>Miner {plan.request.minerTier}</b> · <b>Belt {plan.request.beltTier}</b> · <b>Pipe {plan.request.pipeTier}</b>
       </span>
     {/if}
+    {#if layout}<span class="tiers">Power use <b>{fmt(layout.powerMw)} MW</b></span>{/if}
     <button onclick={() => plan && onEdit(plan)} disabled={!plan}>Edit numbers</button>
     <button onclick={resetLayout} disabled={!planId}>Reset layout</button>
     <button onclick={clearBuilt} disabled={!planId}>Untick all</button>

@@ -11,6 +11,8 @@ pub struct Layout {
     pub metrics: Metrics,
     /// filled by the caller after blocks are placed
     pub counts: Vec<super::BuildCount>,
+    /// filled by the caller, which holds the game data
+    pub power_mw: f64,
 }
 
 /// Sizes the screen draws rows and machines with, so both sides agree.

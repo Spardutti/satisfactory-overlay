@@ -40,6 +40,8 @@ pub struct GameData {
     pub recipes: Vec<Recipe>,
     pub unlocks: super::unlocks::UnlockBook,
     pub buildings: HashMap<String, String>,
+    /// MW at 100% clock, keyed by `power_key` of the building name
+    pub machine_power: HashMap<String, f64>,
     pub warnings: Vec<String>,
 }
 
@@ -50,6 +52,10 @@ impl GameData {
 
     pub fn building_name(&self, id: &str) -> String {
         self.buildings.get(id).cloned().unwrap_or_else(|| id.to_string())
+    }
+
+    pub fn full_clock_mw(&self, building_name: &str) -> f64 {
+        self.machine_power.get(&super::machine_power::power_key(building_name)).copied().unwrap_or(0.0)
     }
 
     pub fn is_fluid(&self, id: &str) -> bool {
