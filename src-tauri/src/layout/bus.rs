@@ -1,4 +1,5 @@
 use super::{BeltLine, Row};
+use crate::game_data::POWER;
 use crate::planner::Transport;
 use serde::Serialize;
 
@@ -55,8 +56,9 @@ pub fn input_buses(rows: &[Row], transport: Transport) -> Vec<Bus> {
     buses
 }
 
+/// Power leaves on cables, not belts, so generators get no output bus.
 pub fn output_buses(rows: &[Row], transport: Transport) -> Vec<Bus> {
-    let Some(first) = rows.first() else { return vec![] };
+    let Some(first) = rows.first().filter(|r| r.output.item != POWER) else { return vec![] };
     let out = &first.output;
     let amounts: Vec<f64> = rows.iter().map(|r| r.output.per_min).collect();
     next_fit(&amounts, transport.line_capacity(&out.item, out.fluid))
@@ -90,5 +92,13 @@ mod tests {
     #[test]
     fn next_fit_no_rows_is_no_belts() {
         assert_eq!(next_fit(&[], 60.0), Vec::<Vec<usize>>::new());
+    }
+
+    #[test]
+    fn output_buses_power_gets_no_bus() {
+        let power = BeltLine { item: POWER.into(), item_name: "Power (MW)".into(), per_min: 75.0, fluid: false, over: false };
+        let row = Row { inputs: vec![], machines: vec![100.0], output: power, node: None };
+        let mk1 = Transport { belt: 60.0, pipe: 300.0 };
+        assert!(output_buses(&[row.clone(), row], mk1).is_empty());
     }
 }

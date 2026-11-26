@@ -133,6 +133,7 @@ export type Layout = {
   connections: Connection[];
   metrics: Metrics;
   counts: BuildCount[];
+  powerMw: number;
 };
 
 export const PLANS_CHANGED = "plans-changed";

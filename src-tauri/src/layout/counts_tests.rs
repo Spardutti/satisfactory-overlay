@@ -33,7 +33,7 @@ fn link(item: &str, to_item: &str) -> Connection {
 }
 
 fn layout(blocks: Vec<Block>, connections: Vec<Connection>) -> Layout {
-    Layout { width: 0.0, height: 0.0, blocks, connections, metrics: METRICS, counts: vec![] }
+    Layout { width: 0.0, height: 0.0, blocks, connections, metrics: METRICS, counts: vec![], power_mw: 0.0 }
 }
 
 fn counts(layout: &Layout) -> Vec<(String, u32)> {

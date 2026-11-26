@@ -1,3 +1,4 @@
+use super::machine_power::{machine_power, recipe_power};
 use super::model::{GameData, Item, ItemAmount, Recipe};
 use super::power::{energy_values, power_recipes, POWER};
 use super::unlocks::read_unlocks;
@@ -33,6 +34,9 @@ pub fn parse_docs(text: &str) -> Result<GameData, String> {
         groups.iter().filter(|g| g.native_class.contains("FGSchematic")).flat_map(|g| g.classes.iter()).collect();
     data.unlocks = read_unlocks(&schematics, &factory_recipes);
     add_power(&groups, &mut data);
+    data.machine_power = machine_power(&power_users(&groups));
+    let recipes: Vec<&Value> = groups.iter().filter(|g| g.native_class.contains("FGRecipe")).flat_map(|g| g.classes.iter()).collect();
+    data.recipe_power = recipe_power(&recipes);
     Ok(data)
 }
 
@@ -46,6 +50,12 @@ fn add_power(groups: &[Group], data: &mut GameData) {
     let recipes = power_recipes(&generators, &energy, data);
     data.unlocks.always.extend(recipes.iter().map(|r| r.id.clone()));
     data.recipes.extend(recipes);
+}
+
+/// Factories and extractors; generators make power instead of drawing it.
+fn power_users<'a>(groups: &[Group<'a>]) -> Vec<&'a Value> {
+    let draws = |n: &str| ["FGBuildableManufacturer", "FGBuildableResourceExtractor", "FGBuildableWaterPump"].iter().any(|k| n.contains(k));
+    groups.iter().filter(|g| draws(g.native_class)).flat_map(|g| g.classes.iter()).collect()
 }
 
 fn as_group(value: &Value) -> Option<Group<'_>> {

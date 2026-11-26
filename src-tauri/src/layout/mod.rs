@@ -3,9 +3,11 @@ mod connect;
 mod counts;
 mod model;
 mod place;
+mod power;
 mod rows;
 
 pub use counts::{build_counts, BuildCount};
+pub use power::power_use;
 pub use model::{BeltLine, Block, Connection, Layout, Metrics, Row};
 
 use crate::planner::{PlanResult, RawNeed, Step, Transport};
@@ -23,7 +25,7 @@ pub fn build_layout(result: &PlanResult, transport: Transport) -> Layout {
     let (width, height) = place_columns(&mut blocks);
     let blocks: Vec<Block> = blocks.into_iter().map(|(_, b)| b).collect();
     let connections = connect(&blocks);
-    Layout { width, height, blocks, connections, metrics: METRICS, counts: vec![] }
+    Layout { width, height, blocks, connections, metrics: METRICS, counts: vec![], power_mw: 0.0 }
 }
 
 /// Moves blocks the user placed by hand; the others keep their automatic place.
@@ -84,6 +86,8 @@ fn block(head: Head, rows: Vec<Row>, transport: Transport) -> Block {
 
 #[cfg(test)]
 mod counts_tests;
+#[cfg(test)]
+mod power_tests;
 #[cfg(test)]
 mod level_tests;
 #[cfg(test)]

@@ -1,6 +1,6 @@
 use super::planning::{calculate_request, transport_for};
 use super::plans::change_plans;
-use crate::layout::{apply_positions, build_counts, build_layout, Layout};
+use crate::layout::{apply_positions, build_counts, build_layout, power_use, Layout};
 use crate::state::{lock, AppState};
 use serde::Deserialize;
 use tauri::{AppHandle, State};
@@ -28,6 +28,9 @@ pub fn plan_layout(state: State<AppState>, plan_id: String) -> Result<Layout, St
     let mut layout = build_layout(&calculation.result, transport);
     apply_positions(&mut layout, &plan.positions);
     layout.counts = build_counts(&layout);
+    let recipe_of = calculation.result.steps.iter().map(|s| (s.item.clone(), s.recipe_id.clone())).collect();
+    let game = lock(&state.game);
+    layout.power_mw = game.as_ref().map_or(0.0, |data| power_use(&layout, data, &recipe_of));
     Ok(layout)
 }
 

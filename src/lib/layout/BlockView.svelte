@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fmt, type Block, type Metrics } from "$lib/api";
+  import { fmt, POWER, type Block, type Metrics } from "$lib/api";
   import Belt from "./Belt.svelte";
   import { itemColor } from "./colors";
   import { inputLane, outputLane, rowGeometry } from "./geometry";
@@ -85,7 +85,7 @@
     {#each row.inputs as input, k (k)}
       <text class="rate" x={g.machineLeft - 6} y={g.inputY(k) - 6} style:fill={itemColor(input.item)}>{fmt(input.perMin)}</text>
     {/each}
-    <text class="rate out" x={g.machineRight + 6} y={g.outputY - 6} style:fill={itemColor(row.output.item)}>{fmt(row.output.perMin)}</text>
+    <text class="rate out" x={g.machineRight + 6} y={g.outputY - 6} style:fill={itemColor(row.output.item)}>{fmt(row.output.perMin)}{row.output.item === POWER ? " MW" : ""}</text>
   {/each}
 </g>
 

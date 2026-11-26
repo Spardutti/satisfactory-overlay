@@ -27,7 +27,7 @@
   {
     "NativeClass": "/Script/CoreUObject.Class'/Script/FactoryGame.FGBuildableManufacturer'",
     "Classes": [
-      { "ClassName": "Build_SmelterMk1_C", "mDisplayName": "Smelter" },
+      { "ClassName": "Build_SmelterMk1_C", "mDisplayName": "Smelter", "mPowerConsumption": "4.000000" },
       { "ClassName": "Build_ConstructorMk1_C", "mDisplayName": "Constructor" },
       { "ClassName": "Build_OilRefinery_C", "mDisplayName": "Refinery" }
     ]

@@ -1,14 +1,28 @@
 <script lang="ts">
-  import type { BuildCount } from "$lib/api";
+  import type { Block, BuildCount } from "$lib/api";
 
-  let { counts }: { counts: BuildCount[] } = $props();
+  let { counts, blocks, built }: { counts: BuildCount[]; blocks: Block[]; built: Record<string, number[]> } = $props();
+
+  /** Ticks are per machine row, so a building's built count is the ticked rows of its blocks. */
+  function builtOf(name: string): number {
+    return blocks.filter((b) => b.buildingName === name).reduce((sum, b) => sum + (built[b.item]?.length ?? 0), 0);
+  }
 </script>
 
 <div class="counts">
   <h3>Buildings to bring</h3>
   {#if counts.length}
     <ul>
-      {#each counts as c (c.name)}<li><b>{c.count}</b> × {c.name}</li>{/each}
+      {#each counts as c (c.name)}
+        {@const done = builtOf(c.name)}
+        <li class:all={done > 0 && done >= c.count}>
+          {#if done >= c.count && done > 0}
+            ✓ {c.name} <span class="muted">· all {c.count} built</span>
+          {:else}
+            <b>{c.count - done}</b> × {c.name}{#if done}<span class="muted"> · {done} built</span>{/if}
+          {/if}
+        </li>
+      {/each}
     </ul>
   {:else}
     <p class="muted">Nothing to build.</p>
@@ -34,5 +48,8 @@
   }
   b {
     color: var(--orange);
+  }
+  .all {
+    color: var(--ok);
   }
 </style>
