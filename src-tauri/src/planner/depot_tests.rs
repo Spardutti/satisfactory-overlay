@@ -1,4 +1,5 @@
 use super::*;
+use super::extractor::Extractor;
 use std::collections::BTreeMap;
 
 fn need(item: &str, per_min: f64) -> RawNeed {
@@ -66,4 +67,22 @@ fn rods_from_a_depot_leave_only_the_screw_machines() {
     let steps: Vec<&str> = result.steps.iter().map(|s| s.item.as_str()).collect();
     let sources: Vec<(&str, f64)> = result.raw.iter().map(|r| (r.item.as_str(), r.per_min)).collect();
     assert_eq!((steps, sources), (vec!["Desc_IronScrew_C"], vec![("Desc_IronRod_C", 30.0)]));
+}
+
+#[test]
+fn mark_depot_water_from_a_depot_needs_no_extractors() {
+    let mut water = need("water", 300.0);
+    water.miners = Some(3);
+    water.extractor = Some(Extractor { building: "Water Extractor".into(), rates: NodeRates { pure: 120.0, normal: 120.0, impure: 120.0, belt: 300.0 }, purity: false });
+    water.belts = vec![BeltGroup { machines: 3, per_min: 300.0, over: false }];
+    let mut result = plan(1.0, vec![water]);
+    mark_depot(&mut result, &depot(&[("water", 300.0)]));
+    let w = &result.raw[0];
+    assert_eq!((w.miners, w.extractor.is_none(), w.belts[0].machines), (None, true, 0));
+}
+
+#[test]
+fn on_hand_adds_the_depot_to_a_typed_amount() {
+    let available = std::collections::HashMap::from([("iron".to_string(), 120.0)]);
+    assert_eq!(on_hand(&available, &depot(&[("iron", 30.0)]))["iron"], 150.0);
 }

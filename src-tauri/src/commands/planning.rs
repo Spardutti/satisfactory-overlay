@@ -1,5 +1,5 @@
 use crate::game_data::{GameData, UnlockKind};
-use crate::planner::{apply_nodes, depot_cap, fillable_ores, mark_depot, node_limit, Limit, PlanResult, Planner, Transport};
+use crate::planner::{apply_nodes, depot_cap, fillable_ores, mark_depot, node_limit, on_hand, Limit, PlanResult, Planner, Transport};
 use crate::plans::{checklist, ChecklistStep, Mode, PlanRequest};
 use crate::state::{lock, AppState};
 use serde::Serialize;
@@ -21,7 +21,7 @@ pub struct Calculation {
     pub limit: Option<Limit>,
     /// the most target per minute the listed nodes allow, when an ore runs short
     pub node_limit: Option<f64>,
-    /// ores whose miners could run faster, so the blueprint offers ↑100%
+    /// ores whose miners could run faster, so the blueprint offers ↑100%; none when the depot caps the plan
     pub fillable: Vec<String>,
     /// the most target per minute the depot allows, when it caps the plan
     pub depot_limit: Option<f64>,
@@ -37,6 +37,9 @@ pub fn calculate(state: State<AppState>, request: PlanRequest) -> Result<Calcula
 }
 
 pub fn calculate_request(state: &AppState, request: &PlanRequest) -> Result<Calculation, String> {
+    if let Some(error) = request.depot_error() {
+        return Err(error);
+    }
     let extractors = &state.editable.extractors;
     let transport = transport_for(state, request)?;
     let book = extractors.book(&request.miner_tier, transport)?;
@@ -60,7 +63,6 @@ pub fn calculate_request(state: &AppState, request: &PlanRequest) -> Result<Calc
     mark_depot(&mut result, &request.depot);
     apply_nodes(&mut result, &request.nodes);
     let node_limit = node_limit(&result);
-    // A plan the depot caps cannot grow, so ↑100% would do nothing.
     let fillable = if depot_limit.is_some() { vec![] } else { fillable_ores(&result) };
     let options = result.steps.iter().map(|s| (s.item.clone(), options_for(&planner, &s.item))).collect();
     let cards = checklist(&result);
@@ -106,9 +108,7 @@ fn run_mode(planner: &Planner, request: &PlanRequest) -> Result<Planned, String>
             }
         }
         Mode::Resources { available } => {
-            let mut on_hand = available.clone();
-            on_hand.extend(request.depot.iter().map(|(item, n)| (item.clone(), *n)));
-            let limit = planner.max_rate(target, &on_hand)?;
+            let limit = planner.max_rate(target, &on_hand(available, &request.depot))?;
             let result = planner.plan_rate(target, limit.max_rate)?;
             Ok(Planned { result, limit: Some(limit), depot_limit: None })
         }

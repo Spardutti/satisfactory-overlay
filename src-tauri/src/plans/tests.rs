@@ -171,3 +171,17 @@ fn clear_built_unticks_every_machine() {
     p.clear_built();
     assert_eq!((built(&p), p.built.is_empty()), (vec![0, 0], true));
 }
+
+#[test]
+fn depot_error_the_target_itself_in_the_depot_is_refused() {
+    let mut p = plan("a", vec![]);
+    p.request.depot.insert(p.request.target.clone(), 5.0);
+    assert_eq!(p.request.depot_error(), Some("The item this plan makes can't also come from a depot.".into()));
+}
+
+#[test]
+fn depot_error_a_negative_amount_is_refused() {
+    let mut p = plan("a", vec![]);
+    p.request.depot.insert(RIP.into(), -1.0);
+    assert_eq!(p.request.depot_error(), Some("Enter an amount above 0".into()));
+}

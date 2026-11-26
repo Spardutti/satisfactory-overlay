@@ -9,7 +9,7 @@ pub struct Layout {
     pub blocks: Vec<Block>,
     pub connections: Vec<Connection>,
     pub metrics: Metrics,
-    /// filled by the caller, which knows the miner tier
+    /// filled by the caller after blocks are placed
     pub counts: Vec<super::BuildCount>,
 }
 

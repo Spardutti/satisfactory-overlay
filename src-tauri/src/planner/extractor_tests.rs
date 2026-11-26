@@ -62,3 +62,12 @@ fn book_old_extractors_file_without_fluids_still_gets_the_water_extractor() {
     let old: Extractors = serde_json::from_str(r#"{"miners":{"Mk1":60},"purity":{"impure":0.5,"normal":1.0,"pure":2.0}}"#).unwrap();
     assert_eq!(building(&old.book("Mk1", MK1).unwrap(), "Desc_Water_C"), Some("Water Extractor".into()));
 }
+
+#[test]
+fn book_fluid_rate_of_0_is_an_error() {
+    let zero: Extractors = serde_json::from_str(
+        r#"{"miners":{"Mk1":60},"purity":{"impure":0.5,"normal":1.0,"pure":2.0},"fluids":{"Desc_Water_C":{"building":"Water Extractor","rate":0,"purity":false}}}"#,
+    )
+    .unwrap();
+    assert_eq!(zero.book("Mk1", MK1).unwrap_err(), "Water Extractor needs a rate above 0 in extractors.json");
+}

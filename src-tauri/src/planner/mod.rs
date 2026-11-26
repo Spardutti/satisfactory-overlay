@@ -12,7 +12,7 @@ mod targets;
 mod transport;
 mod flows;
 
-pub use depot::{depot_cap, mark_depot};
+pub use depot::{depot_cap, mark_depot, on_hand};
 pub use extractor::{Extractor, ExtractorBook};
 pub use fill::{fillable_ores, miner_capacity};
 pub use limit::{Limit, RawLeft};

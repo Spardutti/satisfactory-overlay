@@ -38,6 +38,15 @@ impl PlanRequest {
 }
 
 impl PlanRequest {
+    /// Why the depot cannot be used as entered, if it cannot.
+    pub fn depot_error(&self) -> Option<String> {
+        if self.depot.contains_key(&self.target) {
+            return Some("The item this plan makes can't also come from a depot.".into());
+        }
+        let bad_amount = self.depot.values().any(|n| !n.is_finite() || *n <= 0.0);
+        bad_amount.then(|| "Enter an amount above 0".into())
+    }
+
     /// Sets what a depot sends of one item; None or 0 takes the depot away. Refuses negative or broken amounts.
     pub fn set_depot(&mut self, item: String, per_min: Option<f64>) -> Result<(), String> {
         match per_min {
