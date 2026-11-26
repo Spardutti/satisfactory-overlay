@@ -1,5 +1,5 @@
-use super::planning::calculate_request;
-use crate::planner::NodeCounts;
+use super::planning::{calculate_request, transport_for};
+use crate::planner::{miner_capacity, NodeCounts};
 use crate::plans::{checklist, ManualProgress, Plan, PlanRequest, PlanStore, ProgressSource};
 use crate::state::{lock, AppState};
 use serde::Deserialize;
@@ -87,6 +87,39 @@ pub fn toggle_built(app: AppHandle, change: BuiltToggle) -> Result<(), String> {
             plan.toggle_built(&change.item, change.row);
         }
     })
+}
+
+/// Unticks every machine of a saved plan, to build it again.
+#[tauri::command]
+pub fn clear_built(app: AppHandle, plan_id: String) -> Result<(), String> {
+    change_plans(&app, |store| {
+        if let Some(plan) = store.get_mut(&plan_id) {
+            plan.clear_built();
+        }
+    })
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FillChange {
+    plan_id: String,
+    item: String,
+}
+
+/// Grows a saved plan until this ore's miners all run full, keeping its progress.
+#[tauri::command]
+pub fn fill_miners(app: AppHandle, state: State<AppState>, change: FillChange) -> Result<(), String> {
+    let mut plan = lock(&state.plans).get_mut(&change.plan_id).ok_or("That plan no longer exists")?.clone();
+    let calculation = calculate_request(&state, &plan.request)?;
+    let raw = calculation.result.raw.iter().find(|r| r.item == change.item).ok_or("This plan does not mine that")?;
+    let belt = transport_for(&state, &plan.request)?.belt;
+    let rates = state.editable.extractors.node_rates(&plan.request.miner_tier, belt)?;
+    if !plan.request.grow_to_fill(raw, miner_capacity(raw, rates)) {
+        return Err("These miners already run full".into());
+    }
+    let steps = checklist(&calculate_request(&state, &plan.request)?.result, &plan.request.miner_tier);
+    plan.replace_steps(steps);
+    change_plans(&app, |store| store.upsert(plan))
 }
 
 pub fn change_plans(app: &AppHandle, change: impl FnOnce(&mut PlanStore)) -> Result<(), String> {

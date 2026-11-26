@@ -10,13 +10,18 @@
   let {
     layout = $bindable(),
     built,
+    sources,
     onMoved,
     onToggle,
+    onFill,
   }: {
     layout: Layout;
     built: Record<string, number[]>;
+    /** items mined here, whose last miner may be sped up to 100% */
+    sources: string[];
     onMoved: (item: string, x: number, y: number) => void;
     onToggle: (item: string, row: number) => void;
+    onFill: (item: string) => void;
   } = $props();
 
   let screen = $state<HTMLDivElement>();
@@ -44,6 +49,8 @@
     if (e.button !== 0) return;
     const target = e.target as Element;
     if (target.closest("button")) return;
+    const fill = target.closest("[data-fill]")?.getAttribute("data-fill");
+    if (fill) return onFill(fill);
     const item = target.closest("[data-block]")?.getAttribute("data-block");
     const block = layout.blocks.find((b) => b.item === item) ?? null;
     const row = target.closest("[data-row]")?.getAttribute("data-row");
@@ -90,7 +97,7 @@
         <text class="link-label" x={branch.label.x} y={branch.label.y} style:fill={itemColor(branch.item)}>{fmt(branch.perMin)}</text>
       {/each}
       {#each layout.blocks as block (block.item)}
-        <BlockView {block} metrics={layout.metrics} built={built[block.item] ?? []} />
+        <BlockView {block} metrics={layout.metrics} built={built[block.item] ?? []} fillable={sources.includes(block.item)} />
       {/each}
     </g>
   </svg>

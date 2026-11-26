@@ -128,10 +128,12 @@ export const api = {
   moveBlock: (change: { planId: string; item: string; x: number; y: number }) => invoke<void>("move_block", { change }),
   resetLayout: (planId: string) => invoke<void>("reset_layout", { planId }),
   setNodes: (change: { planId: string; item: string; nodes: NodeCounts }) => invoke<void>("set_nodes", { change }),
+  fillMiners: (change: { planId: string; item: string }) => invoke<void>("fill_miners", { change }),
   listPlans: () => invoke<PlanStore>("list_plans"),
   savePlan: (draft: { id: string | null; name: string; request: PlanRequest }) =>
     invoke<Plan>("save_plan", { draft }),
   deletePlan: (id: string) => invoke<void>("delete_plan", { id }),
+  clearBuilt: (planId: string) => invoke<void>("clear_built", { planId }),
   toggleBuilt: (change: { planId: string; item: string; row: number }) => invoke<void>("toggle_built", { change }),
 };
 

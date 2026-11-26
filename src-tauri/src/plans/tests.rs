@@ -128,3 +128,12 @@ fn set_nodes_clears_the_ticks_of_that_ore() {
     p.set_nodes("Desc_OreIron_C".into(), NodeCounts { pure: 1, normal: 0, impure: 0 });
     assert_eq!(p.built.keys().map(String::as_str).collect::<Vec<_>>(), vec!["Rod"]);
 }
+
+#[test]
+fn clear_built_unticks_every_machine() {
+    let mut p = plan("a", vec![step("Smelter", 2), step("Rod", 3)]);
+    p.toggle_built("Smelter", 0);
+    p.toggle_built("Rod", 2);
+    p.clear_built();
+    assert_eq!((built(&p), p.built.is_empty()), (vec![0, 0], true));
+}

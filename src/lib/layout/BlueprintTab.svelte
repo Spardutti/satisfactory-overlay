@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { listen } from "@tauri-apps/api/event";
-  import { api, PLANS_CHANGED, type Calculation, type Layout, type NodeCounts, type PlanStore } from "$lib/api";
+  import { api, PLANS_CHANGED, type Calculation, type Layout, type NodeCounts, type Plan, type PlanStore } from "$lib/api";
   import NodesPanel from "$lib/planner/NodesPanel.svelte";
   import Blueprint from "./Blueprint.svelte";
 
-  let { planId = $bindable() }: { planId: string | null } = $props();
+  let { planId = $bindable(), onEdit }: { planId: string | null; onEdit: (plan: Plan) => void } = $props();
 
   let store = $state<PlanStore>({ plans: [] });
   let layout = $state<Layout | null>(null);
@@ -13,6 +13,7 @@
   let showNodes = $state(false);
   let calc = $state<Calculation | null>(null);
   const plan = $derived(store.plans.find((p) => p.id === planId) ?? null);
+  const sources = $derived(calc?.result.raw.filter((r) => r.miners != null).map((r) => r.item) ?? []);
 
   onMount(() => {
     refresh().then(load);
@@ -54,6 +55,10 @@
     if (planId) api.toggleBuilt({ planId, item, row }).catch((e) => (error = String(e)));
   }
 
+  function clearBuilt() {
+    if (planId && confirm("Untick every machine in this plan?")) api.clearBuilt(planId).catch((e) => (error = String(e)));
+  }
+
   function saveMove(item: string, x: number, y: number) {
     if (planId) api.moveBlock({ planId, item, x, y }).catch((e) => (error = String(e)));
   }
@@ -62,6 +67,17 @@
     if (!planId) return;
     try {
       await api.setNodes({ planId, item, nodes });
+      await refresh();
+      await fetchPlan();
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
+  async function fill(item: string) {
+    if (!planId) return;
+    try {
+      await api.fillMiners({ planId, item });
       await refresh();
       await fetchPlan();
     } catch (e) {
@@ -85,7 +101,14 @@
     <select bind:value={planId} onchange={load}>
       {#each store.plans as plan (plan.id)}<option value={plan.id}>{plan.name}</option>{/each}
     </select>
+    {#if plan}
+      <span class="tiers">
+        <b>Miner {plan.request.minerTier}</b> · <b>Belt {plan.request.beltTier}</b> · <b>Pipe {plan.request.pipeTier}</b>
+      </span>
+    {/if}
+    <button onclick={() => plan && onEdit(plan)} disabled={!plan}>Edit numbers</button>
     <button onclick={resetLayout} disabled={!planId}>Reset layout</button>
+    <button onclick={clearBuilt} disabled={!planId}>Untick all</button>
     <button onclick={() => (showNodes = !showNodes)} disabled={!calc} class:primary={showNodes}>Nodes</button>
     <span class="muted">Scroll to zoom · drag to move · click a machine to tick it built</span>
     {#if error}<span class="error">{error}</span>{/if}
@@ -95,10 +118,10 @@
   {/if}
   {#if layout}
     {#key planId}
-      <Blueprint bind:layout built={plan?.built ?? {}} onMoved={saveMove} onToggle={toggleBuilt} />
+      <Blueprint bind:layout built={plan?.built ?? {}} {sources} onMoved={saveMove} onToggle={toggleBuilt} onFill={fill} />
     {/key}
   {:else if !store.plans.length}
-    <p class="muted pad">Save a plan first, then open its blueprint here.</p>
+    <p class="muted pad">No blueprints yet.</p>
   {/if}
 </div>
 
@@ -107,6 +130,10 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+  }
+  .tiers b {
+    color: var(--orange);
+    font-weight: 600;
   }
   .bar {
     display: flex;

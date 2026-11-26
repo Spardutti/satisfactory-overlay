@@ -87,6 +87,11 @@ impl Plan {
         self.count_built();
     }
 
+    pub fn clear_built(&mut self) {
+        self.built.clear();
+        self.count_built();
+    }
+
     /// Entering nodes reorders an ore's miners, so its ticks start over.
     pub fn set_nodes(&mut self, item: String, counts: NodeCounts) {
         self.built.remove(&item);
