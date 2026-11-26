@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api, type Calculation, type ExtractorOptions, type Named, type NodeCounts, type Plan, type Target } from "$lib/api";
+  import { api, type Calculation, type ExtractorOptions, type Named, type NodeCounts, type Plan, type PowerOption, type Target } from "$lib/api";
   import { defaultName, emptyForm, fromPlan, toRequest } from "./form";
   import NodesPanel from "./NodesPanel.svelte";
   import PlanForm from "./PlanForm.svelte";
@@ -10,6 +10,7 @@
 
   let targets = $state<Target[]>([]);
   let raws = $state<Named[]>([]);
+  let powerOptions = $state<PowerOption[]>([]);
   let extractors = $state<ExtractorOptions>({ tiers: [], belts: [], pipes: [] });
   let form = $state(emptyForm());
   let calc = $state<Calculation | null>(null);
@@ -18,7 +19,12 @@
   let planId = $state<string | null>(null);
 
   onMount(async () => {
-    [targets, raws, extractors] = await Promise.all([api.listTargets(), api.listRawResources(), api.extractorOptions()]);
+    [targets, raws, extractors, powerOptions] = await Promise.all([
+      api.listTargets(),
+      api.listRawResources(),
+      api.extractorOptions(),
+      api.listPowerOptions(),
+    ]);
     if (editing) {
       planId = editing.id;
       form = fromPlan(editing, targets);
@@ -72,7 +78,7 @@
 
 <div class="tab">
   <aside>
-    <PlanForm bind:form {targets} {raws} {extractors} onCalculate={calculate} />
+    <PlanForm bind:form {targets} {raws} {extractors} {powerOptions} onCalculate={calculate} />
     {#if Object.keys(form.choices).length}
       <button onclick={resetChoices}>Reset recipe picks</button>
     {/if}

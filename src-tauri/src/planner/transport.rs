@@ -1,4 +1,5 @@
 use super::result::whole_machines;
+use crate::game_data::POWER;
 use serde::Serialize;
 
 /// Speed of one belt line and one pipe line for the plan's chosen tiers.
@@ -14,6 +15,11 @@ impl Transport {
             true => self.pipe,
             false => self.belt,
         }
+    }
+
+    /// What one line of `item` carries; power runs on cables, which have no limit.
+    pub fn line_capacity(&self, item: &str, fluid: bool) -> f64 {
+        if item == POWER { f64::INFINITY } else { self.capacity(fluid) }
     }
 }
 

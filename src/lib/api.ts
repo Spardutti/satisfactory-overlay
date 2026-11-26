@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 export type Named = { id: string; name: string };
 export type Target = Named & { standard: { buildingName: string; perMachine: number } | null };
 export type DataSummary = { path: string; items: number; recipes: number; warnings: string[] };
+export type PowerOption = { recipeId: string; generator: string; fuel: string; megawatts: number };
 export type Alternate = { id: string; name: string; makes: string; enabled: boolean };
 export type UnlockKind = "milestone" | "mam" | "alternate";
 export type Unlock = { id: string; name: string; kind: UnlockKind; tier: number; tree: string; makes: string[]; ticked: boolean };
@@ -135,11 +136,14 @@ export type Layout = {
 };
 
 export const PLANS_CHANGED = "plans-changed";
+/** The made-up item generators make; its rate is megawatts. */
+export const POWER = "Power";
 
 export const api = {
   loadGameData: () => invoke<DataSummary | null>("load_game_data"),
   setDocsPath: (path: string) => invoke<DataSummary>("set_docs_path", { path }),
   listTargets: () => invoke<Target[]>("list_targets"),
+  listPowerOptions: () => invoke<PowerOption[]>("list_power_options"),
   listRawResources: () => invoke<Named[]>("list_raw_resources"),
   listAlternates: () => invoke<Alternate[]>("list_alternates"),
   setAlternate: (id: string, enabled: boolean) => invoke<void>("set_alternate", { id, enabled }),

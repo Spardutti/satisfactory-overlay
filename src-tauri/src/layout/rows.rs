@@ -70,7 +70,7 @@ fn belt(flow: &Flow, per_min: f64, transport: Transport) -> BeltLine {
         item_name: flow.item_name.clone(),
         per_min,
         fluid: flow.fluid,
-        over: per_min > transport.capacity(flow.fluid) + 1e-9,
+        over: per_min > transport.line_capacity(&flow.item, flow.fluid) + 1e-9,
     }
 }
 

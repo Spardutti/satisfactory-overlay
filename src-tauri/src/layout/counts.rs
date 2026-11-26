@@ -1,4 +1,5 @@
 use super::{Block, Connection, Layout};
+use crate::game_data::POWER;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
@@ -39,7 +40,7 @@ fn bus_splits(block: &Block) -> Vec<(&'static str, u32)> {
     let outputs = block.output_buses.iter().map(|b| (b, "Merger"));
     inputs
         .chain(outputs)
-        .filter(|(bus, _)| bus.taps.len() > 1)
+        .filter(|(bus, _)| bus.taps.len() > 1 && bus.item != POWER)
         .map(|(bus, belt_part)| (if bus.fluid { "Pipeline Junction" } else { belt_part }, bus.taps.len() as u32))
         .collect()
 }

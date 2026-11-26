@@ -1,4 +1,5 @@
 use super::model::{GameData, Item, ItemAmount, Recipe};
+use super::power::{energy_values, power_recipes, POWER};
 use super::unlocks::read_unlocks;
 use super::unreal::{parse_class_list, parse_item_amounts};
 use serde_json::Value;
@@ -31,7 +32,20 @@ pub fn parse_docs(text: &str) -> Result<GameData, String> {
     let schematics: Vec<&Value> =
         groups.iter().filter(|g| g.native_class.contains("FGSchematic")).flat_map(|g| g.classes.iter()).collect();
     data.unlocks = read_unlocks(&schematics, &factory_recipes);
+    add_power(&groups, &mut data);
     Ok(data)
+}
+
+/// Generator + fuel recipes that make power; generators need no unlock, their fuels do.
+fn add_power(groups: &[Group], data: &mut GameData) {
+    let classes = |pick: fn(&str) -> bool| groups.iter().filter(|g| pick(g.native_class)).flat_map(|g| g.classes.iter()).collect::<Vec<_>>();
+    let generators = classes(|n| n.contains("FGBuildableGeneratorFuel"));
+    let energy = energy_values(&classes(is_item_group));
+    generators.iter().for_each(|g| read_building(g, data));
+    data.items.insert(POWER.into(), Item { id: POWER.into(), name: "Power (MW)".into(), fluid: false, resource: false });
+    let recipes = power_recipes(&generators, &energy, data);
+    data.unlocks.always.extend(recipes.iter().map(|r| r.id.clone()));
+    data.recipes.extend(recipes);
 }
 
 fn as_group(value: &Value) -> Option<Group<'_>> {
