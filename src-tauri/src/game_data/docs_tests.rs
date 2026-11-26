@@ -70,5 +70,5 @@ fn parse_docs_non_array_root_is_an_error() {
 #[test]
 fn parse_docs_reads_factory_power_draw() {
     let data = fixture();
-    assert_eq!((data.full_clock_mw("Smelter"), data.full_clock_mw("Constructor")), (4.0, 0.0));
+    assert_eq!((data.full_clock_mw("Smelter", None), data.full_clock_mw("Constructor", None)), (4.0, 0.0));
 }

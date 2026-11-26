@@ -28,8 +28,9 @@ pub fn plan_layout(state: State<AppState>, plan_id: String) -> Result<Layout, St
     let mut layout = build_layout(&calculation.result, transport);
     apply_positions(&mut layout, &plan.positions);
     layout.counts = build_counts(&layout);
+    let recipe_of = calculation.result.steps.iter().map(|s| (s.item.clone(), s.recipe_id.clone())).collect();
     let game = lock(&state.game);
-    layout.power_mw = game.as_ref().map_or(0.0, |data| power_use(&layout, data));
+    layout.power_mw = game.as_ref().map_or(0.0, |data| power_use(&layout, data, &recipe_of));
     Ok(layout)
 }
 

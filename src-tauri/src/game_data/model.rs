@@ -40,8 +40,8 @@ pub struct GameData {
     pub recipes: Vec<Recipe>,
     pub unlocks: super::unlocks::UnlockBook,
     pub buildings: HashMap<String, String>,
-    /// MW at 100% clock, keyed by `power_key` of the building name
     pub machine_power: HashMap<String, f64>,
+    pub recipe_power: HashMap<String, f64>,
     pub warnings: Vec<String>,
 }
 
@@ -54,8 +54,11 @@ impl GameData {
         self.buildings.get(id).cloned().unwrap_or_else(|| id.to_string())
     }
 
-    pub fn full_clock_mw(&self, building_name: &str) -> f64 {
-        self.machine_power.get(&super::machine_power::power_key(building_name)).copied().unwrap_or(0.0)
+    /// A swinging building (Particle Accelerator) has no steady draw, so its recipe's average counts.
+    pub fn full_clock_mw(&self, building_name: &str, recipe_id: Option<&str>) -> f64 {
+        let steady = self.machine_power.get(&super::machine_power::power_key(building_name));
+        let swinging = || recipe_id.and_then(|id| self.recipe_power.get(id));
+        steady.or_else(swinging).copied().unwrap_or(0.0)
     }
 
     pub fn is_fluid(&self, id: &str) -> bool {

@@ -1,4 +1,4 @@
-use super::machine_power::machine_power;
+use super::machine_power::{machine_power, recipe_power};
 use super::model::{GameData, Item, ItemAmount, Recipe};
 use super::power::{energy_values, power_recipes, POWER};
 use super::unlocks::read_unlocks;
@@ -35,6 +35,8 @@ pub fn parse_docs(text: &str) -> Result<GameData, String> {
     data.unlocks = read_unlocks(&schematics, &factory_recipes);
     add_power(&groups, &mut data);
     data.machine_power = machine_power(&power_users(&groups));
+    let recipes: Vec<&Value> = groups.iter().filter(|g| g.native_class.contains("FGRecipe")).flat_map(|g| g.classes.iter()).collect();
+    data.recipe_power = recipe_power(&recipes);
     Ok(data)
 }
 

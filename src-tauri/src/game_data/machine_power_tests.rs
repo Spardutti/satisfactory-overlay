@@ -8,12 +8,9 @@ fn machine_power_reads_steady_draw_by_name_without_dots() {
 }
 
 #[test]
-fn machine_power_takes_middle_of_range_for_swinging_draw() {
-    let accelerator = json!({
-        "mDisplayName": "Particle Accelerator", "mPowerConsumption": "0.000000",
-        "mEstimatedMininumPowerConsumption": "250.000000", "mEstimatedMaximumPowerConsumption": "1500.000000"
-    });
-    assert_eq!(machine_power(&[&accelerator]).get("Particle Accelerator"), Some(&875.0));
+fn machine_power_skips_swinging_building() {
+    let accelerator = json!({ "mDisplayName": "Particle Accelerator", "mPowerConsumption": "0.000000", "mEstimatedMaximumPowerConsumption": "1500.000000" });
+    assert!(machine_power(&[&accelerator]).is_empty());
 }
 
 #[test]
@@ -30,4 +27,10 @@ fn clocked_mw_full_clock_draws_full_power() {
 #[test]
 fn clocked_mw_half_clock_draws_less_than_half() {
     assert!((clocked_mw(4.0, 50.0) - 1.6).abs() < 0.001);
+}
+
+#[test]
+fn recipe_power_averages_constant_plus_half_the_swing() {
+    let diamonds = json!({ "ClassName": "Recipe_Diamond_C", "mVariablePowerConsumptionConstant": "250.000000", "mVariablePowerConsumptionFactor": "500.000000" });
+    assert_eq!(recipe_power(&[&diamonds]).get("Recipe_Diamond_C"), Some(&500.0));
 }
