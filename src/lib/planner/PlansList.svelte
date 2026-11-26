@@ -18,6 +18,11 @@
     return () => unlisten.then((stop) => stop());
   });
 
+  /** A click on the row opens it; its own buttons do their own thing. */
+  function openRow(e: Event, plan: Plan) {
+    if (!(e.target as Element).closest("button")) onOpen(plan);
+  }
+
   function remove(plan: Plan) {
     if (confirm(`Delete “${plan.name}”?`)) api.deletePlan(plan.id);
   }
@@ -30,7 +35,13 @@
   {/if}
   {#each store.plans as plan (plan.id)}
     {@const p = progress(plan)}
-    <div class="plan">
+    <div
+      class="plan"
+      role="button"
+      tabindex="0"
+      onclick={(e) => openRow(e, plan)}
+      onkeydown={(e) => e.key === "Enter" && openRow(e, plan)}
+    >
       <span>{plan.name}</span>
       <span class="muted">{p.built} / {p.total} machines built</span>
       <button onclick={() => onOpen(plan)}>Open</button>
@@ -53,6 +64,10 @@
     align-items: center;
     padding: 6px 8px;
     border-bottom: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .plan:hover {
+    background: var(--panel-2);
   }
   .plan > span:first-child {
     flex: 1;
