@@ -141,7 +141,7 @@
     </div>
   {/if}
   {#if showCounts && layout}
-    <div class="pad"><CountsPanel counts={layout.counts} /></div>
+    <div class="pad"><CountsPanel counts={layout.counts} blocks={layout.blocks} built={plan?.built ?? {}} /></div>
   {/if}
   {#if showNodes && calc && plan}
     <div class="pad"><NodesPanel {calc} nodes={plan.request.nodes} onChange={setNodes} /></div>
