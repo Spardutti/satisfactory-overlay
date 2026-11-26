@@ -10,7 +10,6 @@ const LITRES_PER_M3: f64 = 1000.0;
 /// Listed first, so a new power plan starts on coal.
 const DEFAULT_GENERATOR: &str = "Build_GeneratorCoal_C";
 
-/// One generator + fuel pair the player can pick for a power plan.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PowerOption {
@@ -20,7 +19,6 @@ pub struct PowerOption {
     pub megawatts: f64,
 }
 
-/// Every generator + fuel recipe, in the order the planner ranks them (coal first).
 pub fn power_options(data: &GameData) -> Vec<PowerOption> {
     data.recipes
         .iter()
@@ -40,12 +38,10 @@ pub fn fuel_per_min(megawatts: f64, energy_mj: f64, fluid: bool) -> f64 {
     if fluid { per_min / LITRES_PER_M3 } else { per_min }
 }
 
-/// Water in m³ per minute for a generator that needs `ratio` litres per MW each second.
 pub fn water_per_min(megawatts: f64, ratio: f64) -> f64 {
     megawatts * ratio * 60.0 / LITRES_PER_M3
 }
 
-/// Fuel energy in MJ per item (per litre for fluids), from every item class that has one.
 pub fn energy_values(item_classes: &[&Value]) -> HashMap<String, f64> {
     item_classes
         .iter()
@@ -54,7 +50,6 @@ pub fn energy_values(item_classes: &[&Value]) -> HashMap<String, f64> {
         .collect()
 }
 
-/// One recipe per fuel-burning generator and fuel, making `POWER` at the generator's MW per machine.
 pub fn power_recipes(generator_classes: &[&Value], energy: &HashMap<String, f64>, data: &GameData) -> Vec<Recipe> {
     let mut recipes: Vec<Recipe> = generator_classes.iter().flat_map(|g| generator_recipes(g, energy, data)).collect();
     recipes.sort_by_key(|r| r.building != DEFAULT_GENERATOR);
