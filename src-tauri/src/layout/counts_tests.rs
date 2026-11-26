@@ -93,3 +93,12 @@ fn build_counts_skips_depot_and_bring_in_blocks() {
     let l = layout(vec![block("rip", "Depot", 2), block("water", "Bring in", 1)], vec![]);
     assert_eq!(counts(&l), vec![]);
 }
+
+#[test]
+fn build_counts_power_output_needs_no_mergers() {
+    let mut generators = block("power", "Coal-Powered Generator", 3);
+    let mut power = bus(3, false);
+    power.item = crate::game_data::POWER.into();
+    generators.output_buses = vec![power];
+    assert_eq!(counts(&layout(vec![generators], vec![])), vec![("Coal-Powered Generator".into(), 3)]);
+}

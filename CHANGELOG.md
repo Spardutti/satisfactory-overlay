@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.3.0
+
+### Breaking Changes
+- Plans only use recipes you have unlocked. Pick your tier in My recipes before plans calculate (#10).
+
+### Added
+- Plan power: pick Coal, Fuel or Biomass generators and their fuel, set how many, and get the fuel, water, extractors and belts they need (#11).
+- My recipes: tick the milestones, MAM research and alternates you have, and a stuck plan names what to tick (#10).
+- Water Extractor and Oil Extractor blocks for water and crude oil, with oil node purity in the Nodes panel (#10).
+- Get an item from another factory as a depot, from the form or a Depot tag in the blueprint (#10).
+- A Buildings list in the blueprint counts every building, splitter, merger and pipe junction (#10).
+
+### Fixed
+- A depot adds to the amounts you typed instead of replacing them (#10).
+
 ## v0.2.0
 
 ### Breaking Changes

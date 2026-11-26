@@ -1,4 +1,4 @@
-use crate::game_data::{find_docs_file, GameData, GameDocsSource, RecipeSource};
+use crate::game_data::{find_docs_file, power_options, GameData, GameDocsSource, PowerOption, RecipeSource};
 use crate::planner::{targets, Target};
 use crate::state::{lock, AppState};
 use serde::Serialize;
@@ -62,6 +62,12 @@ fn load_from(state: &AppState, path: PathBuf) -> Result<DataSummary, String> {
 
 pub fn with_game<T>(state: &AppState, f: impl FnOnce(&GameData) -> T) -> Result<T, String> {
     lock(&state.game).as_ref().map(f).ok_or("Game data is not loaded yet".into())
+}
+
+/// Generator + fuel pairs for the Power side of the plan form.
+#[tauri::command]
+pub fn list_power_options(state: State<AppState>) -> Result<Vec<PowerOption>, String> {
+    with_game(&state, power_options)
 }
 
 #[tauri::command]

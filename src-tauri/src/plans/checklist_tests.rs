@@ -112,7 +112,6 @@ fn plan_saved_before_belts_loads_with_mk1_tiers() {
 #[test]
 fn checklist_miner_card_names_the_listed_nodes_and_the_shortfall() {
     let mut result = plan(&fixture(), &["Desc_OreIron_C"], "Desc_IronScrew_C", 480.0);
-    let rates = crate::planner::NodeRates { pure: 120.0, normal: 60.0, impure: 30.0, belt: 60.0 };
     let listed = [("Desc_OreIron_C".to_string(), crate::planner::NodeCounts { pure: 1, normal: 0, impure: 1 })];
     crate::planner::apply_nodes(&mut result, &listed.into());
     let cards = checklist(&result);

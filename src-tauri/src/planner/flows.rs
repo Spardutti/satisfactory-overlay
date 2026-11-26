@@ -24,7 +24,7 @@ impl Planner<'_> {
             item_name: self.data.item_name(item),
             per_min: per_machine * machines_exact,
             fluid,
-            belts: belt_groups(per_machine, machines_exact, self.transport.capacity(fluid)),
+            belts: belt_groups(per_machine, machines_exact, self.transport.line_capacity(item, fluid)),
         }
     }
 

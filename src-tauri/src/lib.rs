@@ -39,6 +39,7 @@ pub fn run() {
             data::load_game_data,
             data::set_docs_path,
             data::list_targets,
+            data::list_power_options,
             data::list_raw_resources,
             data::list_alternates,
             data::set_alternate,

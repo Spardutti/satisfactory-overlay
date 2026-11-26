@@ -47,6 +47,8 @@ mod fill_tests;
 #[cfg(test)]
 mod flow_tests;
 #[cfg(test)]
+mod power_tests;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod unlock_tests;
