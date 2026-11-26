@@ -4,7 +4,12 @@
   import { itemColor } from "./colors";
   import { inputLane, outputLane, rowGeometry } from "./geometry";
 
-  let { block, metrics: m, built }: { block: Block; metrics: Metrics; built: number[] } = $props();
+  let {
+    block,
+    metrics: m,
+    built,
+    fillable,
+  }: { block: Block; metrics: Metrics; built: number[]; fillable: boolean } = $props();
 
   const tag = $derived(block.buildingName.slice(0, 4).toUpperCase());
 
@@ -58,7 +63,14 @@
         <text class="clock" x={g.machineLeft + m.machineWidth / 2} y={g.machineTop + 11}>{row.node.toUpperCase()}</text>
       {/if}
       {#if clock < 99.95}
-        <text class="clock" x={g.machineLeft + m.machineWidth / 2} y={g.machineTop + g.machineHeight / 2 + 12}>{fmt(clock)}%</text>
+        <text class="pct" x={g.machineLeft + m.machineWidth / 2} y={g.machineTop + g.machineHeight / 2 + 15}>{fmt(clock)}%</text>
+        {#if fillable && r === block.rows.length - 1}
+          <g class="fill" data-fill={block.item} transform="translate({g.machineRight + 6} {g.machineTop + g.machineHeight - 20})">
+            <title>Speed this miner up to 100%; the whole plan grows to use it</title>
+            <rect width="44" height="16" rx="3" />
+            <text x="22" y="12">↑100%</text>
+          </g>
+        {/if}
       {/if}
     {/each}
     {#each row.inputs as input, k (k)}
@@ -83,6 +95,25 @@
   .clock {
     fill: var(--muted);
     font-size: 10px;
+  }
+  .pct {
+    fill: var(--orange);
+    font-size: 14px;
+    font-weight: 700;
+    text-anchor: middle;
+    pointer-events: none;
+  }
+  .fill {
+    cursor: pointer;
+  }
+  .fill rect {
+    fill: var(--orange);
+  }
+  .fill text {
+    fill: #17191b;
+    font-size: 10px;
+    font-weight: 700;
+    text-anchor: middle;
   }
   .rate {
     font-size: 10px;

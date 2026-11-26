@@ -28,11 +28,12 @@ export function emptyForm(): FormState {
   };
 }
 
-/** What a new plan is called unless the player names it, e.g. "Nuclear Pasta · Miner Mk2 · Belt Mk5 · Pipe Mk2". */
+/** What a new plan is called unless the player names it, e.g. "AI Expansion Server - 60". */
 export function defaultName(form: FormState): string {
   const target = form.targetName.trim();
   if (!target) return "Plan name";
-  return `${target} · Miner ${form.minerTier} · Belt ${form.beltTier} · Pipe ${form.pipeTier}`;
+  if (form.mode !== "rate" || !isAmount(form.rate)) return target;
+  return `${target} - ${Number(form.rate.toFixed(2))}`;
 }
 
 /** The request for the form, or an error message when the target is not a known item. */

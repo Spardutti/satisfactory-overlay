@@ -1,5 +1,6 @@
 mod card_text;
 mod checklist;
+mod fill;
 mod model;
 
 pub use checklist::checklist;
@@ -17,5 +18,7 @@ impl ProgressSource for ManualProgress {
     fn sync(&self, _plan: &mut Plan) {}
 }
 
+#[cfg(test)]
+mod fill_tests;
 #[cfg(test)]
 mod tests;

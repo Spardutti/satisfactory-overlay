@@ -37,7 +37,7 @@ pub struct NodeSupply {
 const EPS: f64 = 1e-9;
 
 impl NodeRates {
-    fn of(&self, purity: &str) -> f64 {
+    pub(super) fn of(&self, purity: &str) -> f64 {
         match purity {
             "pure" => self.pure,
             "normal" => self.normal,

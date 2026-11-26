@@ -3,7 +3,8 @@
   import { onMount } from "svelte";
   import { api, PLANS_CHANGED, progress, type Plan, type PlanStore } from "$lib/api";
 
-  let { onEdit, onBlueprint }: { onEdit: (plan: Plan) => void; onBlueprint: (plan: Plan) => void } = $props();
+  let { onNew, onEdit, onOpen }: { onNew: () => void; onEdit: (plan: Plan) => void; onOpen: (plan: Plan) => void } =
+    $props();
 
   let store = $state<PlanStore>({ plans: [] });
 
@@ -23,16 +24,17 @@
 </script>
 
 <div class="plans">
+  <button class="primary" onclick={onNew}>New blueprint</button>
   {#if !store.plans.length}
-    <p class="muted">No plans yet. Calculate one and press “Save as plan”.</p>
+    <p class="muted">No blueprints yet. Press “New blueprint” to make one.</p>
   {/if}
   {#each store.plans as plan (plan.id)}
     {@const p = progress(plan)}
     <div class="plan">
       <span>{plan.name}</span>
       <span class="muted">{p.built} / {p.total} machines built</span>
-      <button onclick={() => onBlueprint(plan)}>Blueprint</button>
-      <button onclick={() => onEdit(plan)}>Edit</button>
+      <button onclick={() => onOpen(plan)}>Open</button>
+      <button onclick={() => onEdit(plan)}>Edit numbers</button>
       <button onclick={() => remove(plan)}>Delete</button>
     </div>
   {/each}
@@ -41,6 +43,9 @@
 <style>
   .plans {
     padding: 12px;
+  }
+  .plans > .primary {
+    margin-bottom: 8px;
   }
   .plan {
     display: flex;

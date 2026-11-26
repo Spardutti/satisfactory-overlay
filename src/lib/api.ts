@@ -61,6 +61,8 @@ export type Calculation = {
   limit: Limit | null;
   /** the most target per minute the listed nodes allow, when an ore runs short */
   nodeLimit: number | null;
+  /** ores whose miners could run faster */
+  fillable: string[];
   options: Record<string, RecipeOption[]>;
   cards: ChecklistStep[];
 };
@@ -128,10 +130,12 @@ export const api = {
   moveBlock: (change: { planId: string; item: string; x: number; y: number }) => invoke<void>("move_block", { change }),
   resetLayout: (planId: string) => invoke<void>("reset_layout", { planId }),
   setNodes: (change: { planId: string; item: string; nodes: NodeCounts }) => invoke<void>("set_nodes", { change }),
+  fillMiners: (change: { planId: string; item: string }) => invoke<void>("fill_miners", { change }),
   listPlans: () => invoke<PlanStore>("list_plans"),
   savePlan: (draft: { id: string | null; name: string; request: PlanRequest }) =>
     invoke<Plan>("save_plan", { draft }),
   deletePlan: (id: string) => invoke<void>("delete_plan", { id }),
+  clearBuilt: (planId: string) => invoke<void>("clear_built", { planId }),
   toggleBuilt: (change: { planId: string; item: string; row: number }) => invoke<void>("toggle_built", { change }),
 };
 

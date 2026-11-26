@@ -1,5 +1,6 @@
 mod book;
 mod expand;
+mod fill;
 mod limit;
 mod nodes;
 mod walk;
@@ -8,6 +9,7 @@ mod targets;
 mod transport;
 mod flows;
 
+pub use fill::{fillable_ores, miner_capacity};
 pub use limit::{Limit, RawLeft};
 pub use nodes::{apply_nodes, draw_from_nodes, node_limit, NodeCounts, NodeDraw, NodeRates, NodeSupply};
 pub use result::{Flow, PlanResult, RawNeed, Step, Surplus, Usage};
@@ -30,6 +32,8 @@ pub struct Planner<'a> {
 
 #[cfg(test)]
 mod choice_tests;
+#[cfg(test)]
+mod fill_tests;
 #[cfg(test)]
 mod flow_tests;
 #[cfg(test)]

@@ -6,32 +6,37 @@
   import PlanTab from "$lib/planner/PlanTab.svelte";
   import BlueprintTab from "$lib/layout/BlueprintTab.svelte";
 
-  type Tab = "plan" | "alternates" | "plans" | "blueprint";
+  type Tab = "blueprints" | "alternates";
   const tabs: [Tab, string][] = [
-    ["plan", "Plan"],
+    ["blueprints", "Blueprints"],
     ["alternates", "My alternates"],
-    ["plans", "Saved plans"],
-    ["blueprint", "Blueprint"],
   ];
+  type Screen = "list" | "form" | "blueprint";
 
   let loaded = $state(false);
-  let tab = $state<Tab>("plan");
+  let tab = $state<Tab>("blueprints");
+  let screen = $state<Screen>("list");
   let editing = $state<Plan | null>(null);
   let blueprintPlan = $state<string | null>(null);
 
-  function edit(plan: Plan) {
-    editing = plan;
-    tab = "plan";
+  function pick(id: Tab) {
+    tab = id;
+    screen = "list";
   }
 
-  function openBlueprint(plan: Plan) {
-    blueprintPlan = plan.id;
-    tab = "blueprint";
+  function edit(plan: Plan) {
+    editing = plan;
+    screen = "form";
   }
 
   function newPlan() {
     editing = null;
-    tab = "plan";
+    screen = "form";
+  }
+
+  function openBlueprint(plan: Plan) {
+    blueprintPlan = plan.id;
+    screen = "blueprint";
   }
 </script>
 
@@ -40,21 +45,23 @@
   {#if loaded}
     <nav>
       {#each tabs as [id, label] (id)}
-        <button class:on={tab === id} onclick={() => (id === "plan" ? newPlan() : (tab = id))}>{label}</button>
+        <button class:on={tab === id} onclick={() => pick(id)}>{label}</button>
       {/each}
-      {#if editing && tab === "plan"}<span class="muted">Editing “{editing.name}”</span>{/if}
+      {#if tab === "blueprints" && screen === "form"}
+        <span class="muted">{editing ? `Editing “${editing.name}”` : "New blueprint"}</span>
+      {/if}
     </nav>
     <main>
-      {#if tab === "plan"}
-        {#key editing?.id}
-          <PlanTab {editing} />
-        {/key}
-      {:else if tab === "alternates"}
+      {#if tab === "alternates"}
         <Alternates />
-      {:else if tab === "blueprint"}
-        <BlueprintTab bind:planId={blueprintPlan} />
+      {:else if screen === "form"}
+        {#key editing?.id}
+          <PlanTab {editing} onSaved={openBlueprint} />
+        {/key}
+      {:else if screen === "blueprint"}
+        <BlueprintTab bind:planId={blueprintPlan} onEdit={edit} />
       {:else}
-        <PlansList onEdit={edit} onBlueprint={openBlueprint} />
+        <PlansList onNew={newPlan} onEdit={edit} onOpen={openBlueprint} />
       {/if}
     </main>
   {/if}
