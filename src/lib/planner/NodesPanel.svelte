@@ -11,7 +11,7 @@
 
   const PURITIES = ["pure", "normal", "impure"] as const;
   const NONE: NodeCounts = { pure: 0, normal: 0, impure: 0 };
-  const mined = $derived(calc.result.raw.filter((r) => r.miners !== null));
+  const mined = $derived(calc.result.raw.filter((r) => r.extractor?.purity && !r.fromDepot));
 
   function step(item: string, purity: keyof NodeCounts, by: number) {
     const counts = nodes[item] ?? NONE;

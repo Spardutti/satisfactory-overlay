@@ -1,4 +1,5 @@
 use super::model::{GameData, Item, ItemAmount, Recipe};
+use super::unlocks::read_unlocks;
 use super::unreal::{parse_class_list, parse_item_amounts};
 use serde_json::Value;
 
@@ -26,6 +27,10 @@ pub fn parse_docs(text: &str) -> Result<GameData, String> {
     for group in groups.iter().filter(|g| g.native_class.contains("FGRecipe")) {
         group.classes.iter().for_each(|c| read_recipe(c, &mut data));
     }
+    let factory_recipes = data.recipes.iter().map(|r| r.id.clone()).collect();
+    let schematics: Vec<&Value> =
+        groups.iter().filter(|g| g.native_class.contains("FGSchematic")).flat_map(|g| g.classes.iter()).collect();
+    data.unlocks = read_unlocks(&schematics, &factory_recipes);
     Ok(data)
 }
 

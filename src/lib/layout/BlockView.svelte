@@ -9,7 +9,8 @@
     metrics: m,
     built,
     fillable,
-  }: { block: Block; metrics: Metrics; built: number[]; fillable: boolean } = $props();
+    depotable,
+  }: { block: Block; metrics: Metrics; built: number[]; fillable: boolean; depotable: boolean } = $props();
 
   const tag = $derived(block.buildingName.slice(0, 4).toUpperCase());
 
@@ -22,6 +23,14 @@
   <rect class="frame" width={block.width} height={block.height} rx="6" />
   <text class="title" x="12" y="18">{block.title}</text>
   <text class="building" x="12" y="32">{block.buildingName}</text>
+  {#if depotable}
+    {@const isDepot = block.buildingName === "Depot"}
+    <g class="badge" data-depot={block.item} transform="translate({block.width - 58} 22)">
+      <title>{isDepot ? "Change or remove this depot" : "Get this from a depot instead of building it"}</title>
+      <rect width="50" height="16" rx="3" />
+      <text x="25" y="12">{isDepot ? "Edit" : "Depot"}</text>
+    </g>
+  {/if}
 
   {#each block.inputBuses as bus, j (j)}
     {@const lane = inputLane(block, m, j)}
@@ -65,7 +74,7 @@
       {#if clock < 99.95}
         <text class="pct" x={g.machineLeft + m.machineWidth / 2} y={g.machineTop + g.machineHeight / 2 + 15}>{fmt(clock)}%</text>
         {#if fillable && r === block.rows.length - 1}
-          <g class="fill" data-fill={block.item} transform="translate({g.machineRight + 6} {g.machineTop + g.machineHeight - 20})">
+          <g class="badge" data-fill={block.item} transform="translate({g.machineRight + 6} {g.machineTop + g.machineHeight - 20})">
             <title>Speed this miner up to 100%; the whole plan grows to use it</title>
             <rect width="44" height="16" rx="3" />
             <text x="22" y="12">↑100%</text>
@@ -103,13 +112,13 @@
     text-anchor: middle;
     pointer-events: none;
   }
-  .fill {
+  .badge {
     cursor: pointer;
   }
-  .fill rect {
+  .badge rect {
     fill: var(--orange);
   }
-  .fill text {
+  .badge text {
     fill: #17191b;
     font-size: 10px;
     font-weight: 700;

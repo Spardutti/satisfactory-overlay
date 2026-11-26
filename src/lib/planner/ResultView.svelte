@@ -13,7 +13,8 @@
   } = $props();
 
   const stepByItem = $derived(new Map(calc.result.steps.map((s) => [s.item, s])));
-  const unmined = $derived(calc.result.raw.filter((r) => r.miners === null));
+  const unmined = $derived(calc.result.raw.filter((r) => r.miners === null && !r.fromDepot));
+  const fromDepot = $derived(calc.result.raw.filter((r) => r.fromDepot));
 </script>
 
 <div class="result">
@@ -27,6 +28,21 @@
         {/each}
       </ul>
     </div>
+  {/if}
+
+  {#if calc.depotLimit !== null}
+    <div class="box">
+      Your depot allows <strong>{fmt(calc.depotLimit)} /min</strong> of {calc.result.targetName}, so the plan makes that much.
+    </div>
+  {/if}
+
+  {#if fromDepot.length}
+    <h3>From your depot</h3>
+    <ul>
+      {#each fromDepot as r (r.item)}
+        <li>{r.itemName}: {fmt(r.perMin)} /min</li>
+      {/each}
+    </ul>
   {/if}
 
   {#if unmined.length}

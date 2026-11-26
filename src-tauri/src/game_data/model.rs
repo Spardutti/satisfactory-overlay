@@ -38,6 +38,7 @@ impl Recipe {
 pub struct GameData {
     pub items: HashMap<String, Item>,
     pub recipes: Vec<Recipe>,
+    pub unlocks: super::unlocks::UnlockBook,
     pub buildings: HashMap<String, String>,
     pub warnings: Vec<String>,
 }

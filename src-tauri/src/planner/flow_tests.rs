@@ -33,7 +33,7 @@ fn plan_rate_iron_ingot_goes_to_iron_rod() {
 
 fn ore_with_mk2_miner_on_mk1_belt() -> RawNeed {
     let mut s = setup(fixture());
-    s.miner_rate = 120.0;
+    s.extractors = crate::planner::ExtractorBook::miner_only(120.0, 60.0);
     let result = s.planner().plan_rate("Desc_IronScrew_C", 480.0).unwrap();
     result.raw.into_iter().find(|r| r.item == "Desc_OreIron_C").unwrap()
 }
