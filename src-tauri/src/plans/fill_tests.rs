@@ -64,3 +64,14 @@ fn grow_to_fill_ore_not_used_changes_nothing() {
     let grew = req.grow_to_fill(&iron(0.0), 60.0);
     assert_eq!((grew, rate_of(&req)), (false, 60.0));
 }
+
+#[test]
+fn grow_to_fill_resources_mode_keeps_a_bigger_typed_amount() {
+    let available = HashMap::from([("copper".to_string(), 200.0)]);
+    let mut req = request(Mode::Resources { available });
+    let mut copper = iron(45.0);
+    copper.item = "copper".into();
+    let grew = req.grow_to_fill(&copper, 60.0);
+    let Mode::Resources { available } = &req.mode else { panic!("expected resources mode") };
+    assert_eq!((grew, available["copper"]), (false, 200.0));
+}

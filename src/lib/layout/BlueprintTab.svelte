@@ -13,7 +13,7 @@
   let showNodes = $state(false);
   let calc = $state<Calculation | null>(null);
   const plan = $derived(store.plans.find((p) => p.id === planId) ?? null);
-  const sources = $derived(calc?.result.raw.filter((r) => r.miners != null).map((r) => r.item) ?? []);
+  const sources = $derived(calc?.fillable ?? []);
 
   onMount(() => {
     refresh().then(load);

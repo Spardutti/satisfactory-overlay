@@ -1,5 +1,5 @@
 use crate::game_data::GameData;
-use crate::planner::{apply_nodes, node_limit, Limit, PlanResult, Planner, Transport};
+use crate::planner::{apply_nodes, fillable_ores, node_limit, Limit, PlanResult, Planner, Transport};
 use crate::plans::{checklist, ChecklistStep, Mode, PlanRequest};
 use crate::state::{lock, AppState};
 use serde::Serialize;
@@ -21,6 +21,8 @@ pub struct Calculation {
     pub limit: Option<Limit>,
     /// the most target per minute the listed nodes allow, when an ore runs short
     pub node_limit: Option<f64>,
+    /// ores whose miners could run faster, so the blueprint offers ↑100%
+    pub fillable: Vec<String>,
     /// build cards, in build order
     pub cards: Vec<ChecklistStep>,
     /// item id → recipes the user may pick for that step
@@ -51,9 +53,10 @@ pub fn calculate_request(state: &AppState, request: &PlanRequest) -> Result<Calc
     let (mut result, limit) = run_mode(&planner, request)?;
     apply_nodes(&mut result, &request.nodes, node_rates);
     let node_limit = node_limit(&result);
+    let fillable = fillable_ores(&result, node_rates);
     let options = result.steps.iter().map(|s| (s.item.clone(), options_for(&planner, &s.item))).collect();
     let cards = checklist(&result, &request.miner_tier);
-    Ok(Calculation { result, limit, node_limit, options, cards })
+    Ok(Calculation { result, limit, node_limit, fillable, options, cards })
 }
 
 pub fn transport_for(state: &AppState, request: &PlanRequest) -> Result<Transport, String> {

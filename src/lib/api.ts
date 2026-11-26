@@ -61,6 +61,8 @@ export type Calculation = {
   limit: Limit | null;
   /** the most target per minute the listed nodes allow, when an ore runs short */
   nodeLimit: number | null;
+  /** ores whose miners could run faster */
+  fillable: string[];
   options: Record<string, RecipeOption[]>;
   cards: ChecklistStep[];
 };

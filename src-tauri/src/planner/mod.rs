@@ -9,7 +9,7 @@ mod targets;
 mod transport;
 mod flows;
 
-pub use fill::miner_capacity;
+pub use fill::{fillable_ores, miner_capacity};
 pub use limit::{Limit, RawLeft};
 pub use nodes::{apply_nodes, draw_from_nodes, node_limit, NodeCounts, NodeDraw, NodeRates, NodeSupply};
 pub use result::{Flow, PlanResult, RawNeed, Step, Surplus, Usage};

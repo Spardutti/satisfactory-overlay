@@ -13,7 +13,11 @@ impl PlanRequest {
         match &mut self.mode {
             Mode::Rate { rate } => *rate *= capacity / raw.per_min,
             Mode::Resources { available } => {
-                available.insert(raw.item.clone(), capacity);
+                let amount = available.entry(raw.item.clone()).or_insert(0.0);
+                if *amount >= capacity {
+                    return false;
+                }
+                *amount = capacity;
             }
         }
         true

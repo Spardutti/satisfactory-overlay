@@ -115,7 +115,7 @@ pub fn fill_miners(app: AppHandle, state: State<AppState>, change: FillChange) -
     let belt = transport_for(&state, &plan.request)?.belt;
     let rates = state.editable.extractors.node_rates(&plan.request.miner_tier, belt)?;
     if !plan.request.grow_to_fill(raw, miner_capacity(raw, rates)) {
-        return Err("These miners already run full".into());
+        return Err("These miners can't grow: they run full, or another ore limits the plan".into());
     }
     let steps = checklist(&calculate_request(&state, &plan.request)?.result, &plan.request.miner_tier);
     plan.replace_steps(steps);
